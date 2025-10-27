@@ -8,7 +8,7 @@
 import Foundation
 
 /// Simple generic API client for making JSON requests.
-enum APIError: Error {
+public enum APIError: Error {
     case badURL
     case requestFailed(Int)
     case decodeFailed
