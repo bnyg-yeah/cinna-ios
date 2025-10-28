@@ -8,7 +8,8 @@
 import SwiftUI
 
 struct Home: View {
-    @State private var recommendations: [OMDbSearchItem] = []
+    @EnvironmentObject private var moviePreferences: MoviePreferencesData
+    @State private var recommendations: [TMDbMovie] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
     
@@ -16,9 +17,17 @@ struct Home: View {
         NavigationStack {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
-                    Text("Recommended for you")
-                        .font(.largeTitle.bold())
-                        .foregroundStyle(Color(.label))
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Recommended for you")
+                            .font(.largeTitle.bold())
+                            .foregroundStyle(Color(.label))
+                        
+                        if !moviePreferences.selectedGenres.isEmpty {
+                            Text("Based on: \(moviePreferences.sortedSelectedGenresString)")
+                                .font(.subheadline)
+                                .foregroundStyle(Color(.secondaryLabel))
+                        }
+                    }
                     
                     if isLoading {
                         ProgressView("Loading movies...")
@@ -71,7 +80,7 @@ struct Home: View {
                 .padding(.vertical, 32)
             }
             .background(Color(.systemGroupedBackground))
-            .navigationDestination(for: OMDbSearchItem.self) { movie in
+            .navigationDestination(for: TMDbMovie.self) { movie in
                 MovieDetailView(movie: movie)
             }
             .navigationTitle("Home")
@@ -91,10 +100,12 @@ struct Home: View {
         errorMessage = nil
         
         do {
-            // Search for popular movies (you can customize this query)
-            let currentYear = String(Calendar.current.component(.year, from: Date()))
-            let result = try await OMDbService.searchMovies(query: "movie", year: currentYear, page: 1)
-            recommendations = result.search ?? []
+            // Use recommendation engine with user's genre preferences
+            let engine = MovieRecommendationEngine.shared
+            recommendations = try await engine.getPersonalizedRecommendations(
+                selectedGenres: moviePreferences.selectedGenres,
+                page: 1
+            )
             isLoading = false
         } catch {
             errorMessage = "Failed to load movies. Please try again."
@@ -107,12 +118,12 @@ struct Home: View {
 // MARK: - RecommendationCard
 
 private struct RecommendationCard: View {
-    let movie: OMDbSearchItem
+    let movie: TMDbMovie
 
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
-            // Show poster from API or placeholder
-            AsyncImage(url: URL(string: movie.poster)) { phase in
+            // Show poster from TMDb
+            AsyncImage(url: URL(string: movie.posterURL ?? "")) { phase in
                 switch phase {
                 case .success(let image):
                     image
@@ -140,13 +151,18 @@ private struct RecommendationCard: View {
                 Text(movie.title)
                     .font(.headline)
                     .foregroundStyle(Color(.label))
+                
+                Text(movie.overview)
+                    .font(.caption)
+                    .foregroundStyle(Color(.secondaryLabel))
+                    .lineLimit(2)
 
                 HStack(spacing: 12) {
                     Label(movie.year, systemImage: "calendar")
                         .font(.caption)
                         .foregroundStyle(Color(.secondaryLabel))
 
-                    RatingBadge(text: movie.type.capitalized)
+                    RatingBadge(text: String(format: "⭐️ %.1f", movie.voteAverage))
                 }
             }
         }
@@ -178,77 +194,46 @@ private struct RecommendationCard: View {
 // MARK: - MovieDetailView
 
 private struct MovieDetailView: View {
-    let movie: OMDbSearchItem
-    @State private var movieDetails: OMDbMovie?
-    @State private var isLoading = true
+    let movie: TMDbMovie
 
     var body: some View {
         ScrollView {
-            if isLoading {
-                ProgressView("Loading details...")
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 40)
-            } else if let details = movieDetails {
-                VStack(alignment: .leading, spacing: 24) {
-                    // Show poster
-                    AsyncImage(url: URL(string: details.poster)) { phase in
-                        if case .success(let image) = phase {
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fit)
-                                .frame(maxHeight: 400)
-                                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                        }
-                    }
-                    
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text(details.title)
-                            .font(.largeTitle.bold())
-                            .foregroundStyle(Color(.label))
-
-                        VStack(alignment: .leading, spacing: 4) {
-                            HStack {
-                                Text(details.year)
-                                if let rating = details.imdbRating {
-                                    Text("⭐️ \(rating)")
-                                }
-                            }
-                            
-                            if let released = details.released, released != "N/A" {
-                                Label(released, systemImage: "calendar")
-                                    .font(.subheadline)
-                                    .foregroundStyle(Color(.secondaryLabel))
-                            }
-                        }
-
-                        Text("Genre: \(details.genre)")
-                            .font(.body)
-                            .foregroundStyle(Color(.secondaryLabel))
-                    }
-
-                    VStack(alignment: .leading, spacing: 16) {
-                        DetailSection(title: "Plot", content: details.plot)
+            VStack(alignment: .leading, spacing: 24) {
+                // Show poster
+                AsyncImage(url: URL(string: movie.posterURL ?? "")) { phase in
+                    if case .success(let image) = phase {
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fit)
+                            .frame(maxHeight: 400)
+                            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
                     }
                 }
-                .padding(24)
+                
+                VStack(alignment: .leading, spacing: 12) {
+                    Text(movie.title)
+                        .font(.largeTitle.bold())
+                        .foregroundStyle(Color(.label))
+
+                    HStack {
+                        Text(movie.releaseDate)
+                        Text("⭐️ \(String(format: "%.1f", movie.voteAverage))")
+                    }
+                    .font(.subheadline)
+                    .foregroundStyle(Color(.secondaryLabel))
+                    
+                    Text("Popularity: \(String(format: "%.0f", movie.popularity))")
+                        .font(.caption)
+                        .foregroundStyle(Color(.tertiaryLabel))
+                }
+
+                VStack(alignment: .leading, spacing: 16) {
+                    DetailSection(title: "Overview", content: movie.overview)
+                }
             }
+            .padding(24)
         }
         .background(Color(.systemGroupedBackground))
-        .task {
-            await loadMovieDetails()
-        }
-    }
-    
-    private func loadMovieDetails() async {
-        isLoading = true
-        
-        do {
-            movieDetails = try await OMDbService.getMovieDetails(imdbID: movie.imdbID, plot: "full")
-            isLoading = false
-        } catch {
-            print("Error loading movie details: \(error)")
-            isLoading = false
-        }
     }
 }
 
@@ -306,4 +291,5 @@ private struct TagBadge: View {
 
 #Preview {
     Home()
+            .environmentObject(MoviePreferencesData())
 }
