@@ -19,7 +19,7 @@ struct TheaterCard: View {
     let theater: Theater
 
     var body: some View {
-        HStack(alignment: .top, spacing: 14) {
+        HStack(alignment: .top, spacing: 16) {
             // ⭐️ Rating (only if available)
             if let rating = theater.rating {
                 VStack(alignment: .center, spacing: 6) {
@@ -49,12 +49,17 @@ struct TheaterCard: View {
 
             Spacer()
         }
-        .padding()
+        .padding(20)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
-                .fill(Color(.systemBackground))
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .fill(Color(.secondarySystemBackground))   // was systemBackground
         )
-        .shadow(radius: 3, y: 2)
+        .overlay(
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .stroke(Color(.quaternarySystemFill), lineWidth: 1)
+        )
+//        .shadow(radius: 3, y: 2)
         // NOTE: Horizontal padding removed here; Theaters.swift owns outer horizontal insets.
     }
 }

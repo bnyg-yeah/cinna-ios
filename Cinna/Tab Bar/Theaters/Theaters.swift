@@ -29,7 +29,9 @@ struct Theaters: View {
     var body: some View {
         NavigationStack {
             VStack {
-                if !userInfo.useCurrentLocationBool || userInfo.currentLocation == nil {
+                if !userInfo.useCurrentLocationBool
+                    || userInfo.currentLocation == nil
+                {
                     VStack(spacing: 12) {
                         Image(systemName: "location.slash")
                             .font(.system(size: 42))
@@ -37,11 +39,13 @@ struct Theaters: View {
                         Text("Location Needed")
                             .font(.title3.bold())
                             .foregroundStyle(.primary)
-                        Text("Enable \"Use Current Location\" during login to discover theaters near you.")
-                            .multilineTextAlignment(.center)
-                            .font(.footnote)
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal)
+                        Text(
+                            "Enable \"Use Current Location\" during login to discover theaters near you."
+                        )
+                        .multilineTextAlignment(.center)
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal)
                     }
                     .frame(maxHeight: .infinity)
                 } else {
@@ -69,20 +73,29 @@ struct Theaters: View {
                             .frame(maxHeight: .infinity)
                         } else {
                             ScrollView {
-                                VStack(spacing: 14) {
-                                    Text("Nearby Theaters")
-                                        .font(.title.bold())
-                                        .foregroundStyle(.primary)
+                                VStack(alignment: .center, spacing: 12) {
 
-                                    // Left-aligned "Based on:" line (replaces HStack+Spacer)
-                                    Text("Based on: " + (cityDisplay ?? (isGeocoding ? "Determining your city…" : "Current Location")))
+                                    VStack(alignment: .leading, spacing: 8) {
+                                        Text("Nearby Theaters")
+                                            .font(.title.bold())
+                                            .foregroundStyle(.primary)
+
+                                        Text(
+                                            "Based on: "
+                                                + (cityDisplay
+                                                    ?? (isGeocoding
+                                                        ? "Determining your city…"
+                                                        : "Current Location"))
+                                        )
                                         .font(.subheadline)
                                         .foregroundStyle(.secondary)
-                                        .frame(maxWidth: .infinity, alignment: .leading)
+                                    }
 
                                     ForEach(theaters, id: \.id) { theater in
                                         NavigationLink(
-                                            destination: TheaterDetailView(theater: theater)
+                                            destination: TheaterDetailView(
+                                                theater: theater
+                                            )
                                         ) {
                                             TheaterCard(theater: theater)
                                         }
@@ -90,8 +103,9 @@ struct Theaters: View {
                                     }
                                 }
                                 .padding(.vertical)
-                                .padding(.horizontal, 20) // owns horizontal inset; card no longer adds its own
+                                .padding(.horizontal, 20)  // owns horizontal inset; card no longer adds its own
                             }
+
                         }
 
                     case .error(let error):
@@ -101,8 +115,12 @@ struct Theaters: View {
                             Button("Retry") {
                                 Task {
                                     if userInfo.useCurrentLocationBool,
-                                       let coordinate = userInfo.currentLocation {
-                                        await viewModel.loadNearbyTheaters(at: coordinate)
+                                        let coordinate = userInfo
+                                            .currentLocation
+                                    {
+                                        await viewModel.loadNearbyTheaters(
+                                            at: coordinate
+                                        )
                                         await geocodeCity(for: coordinate)
                                     } else {
                                         viewModel.reset()
@@ -121,7 +139,7 @@ struct Theaters: View {
             // Refire when toggle OR coordinates change
             .task(id: locationIdentifier) {
                 guard userInfo.useCurrentLocationBool,
-                      let coordinate = userInfo.currentLocation
+                    let coordinate = userInfo.currentLocation
                 else {
                     viewModel.reset()
                     cityDisplay = nil
@@ -153,13 +171,16 @@ struct Theaters: View {
 
 // MARK: - Preview Helpers (Mocks)
 #if DEBUG
-extension UserInfoData {
-    /// Minimal mock for previews. Adjust as needed to match your model init.
-    static func mockBlacksburg() -> UserInfoData {
-        let mock = UserInfoData()
-        mock.useCurrentLocationBool = true
-        mock.currentLocation = CLLocationCoordinate2D(latitude: 37.2296, longitude: -80.4139)
-        return mock
+    extension UserInfoData {
+        /// Minimal mock for previews. Adjust as needed to match your model init.
+        static func mockBlacksburg() -> UserInfoData {
+            let mock = UserInfoData()
+            mock.useCurrentLocationBool = true
+            mock.currentLocation = CLLocationCoordinate2D(
+                latitude: 37.2296,
+                longitude: -80.4139
+            )
+            return mock
+        }
     }
-}
 #endif
