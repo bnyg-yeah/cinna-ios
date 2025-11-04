@@ -34,7 +34,7 @@ struct UserInfoView: View {
                 List {
                     // MARK: Name
                     Section("Your Name") {
-                        SwiftUI.TextField("e.g., Success Qu'avon", text: $userInfo.name)
+                        SwiftUI.TextField("e.g., Demetrius Ja'Quallin", text: $userInfo.name)
                             .textContentType(.name)
                             .contentShape(Rectangle())
                     }

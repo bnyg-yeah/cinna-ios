@@ -25,7 +25,7 @@ struct ContentView: View {
             
             if userHasCompletedLogin {
                 TabView(selection: $selectedTab) {
-                    TheatersView()
+                    Theaters()
                         .tabItem{
                             Label("Theaters", systemImage: "ticket")
                         }
