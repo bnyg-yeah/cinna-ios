@@ -78,75 +78,16 @@ struct TMDbService {
         let response: TMDbResponse = try await APIClient.getJSON(url)
         return response.results
     }
-}
-
-// MARK: - TMDb Models
-
-struct TMDbResponse: Codable {
-    let results: [TMDbMovie]
-    let page: Int
-    let totalPages: Int
-    let totalResults: Int
     
-    enum CodingKeys: String, CodingKey {
-        case results, page
-        case totalPages = "total_pages"
-        case totalResults = "total_results"
+    // Keep this in TMDbService.swift so it can access the private constants.
+    static func makeURL(_ path: String, query: [URLQueryItem] = []) throws -> URL {
+        var components = URLComponents(string: "\(baseURL)\(path)")
+        var items = query
+        items.append(URLQueryItem(name: "api_key", value: apiKey))
+        components?.queryItems = items
+        guard let url = components?.url else { throw APIError.badURL }
+        return url
     }
-}
 
-struct TMDbMovie: Codable, Identifiable, Hashable {
-    let id: Int
-    let title: String
-    let originalTitle: String?
-    let overview: String
-    let posterPath: String?
-    let backdropPath: String?
-    let releaseDate: String
-    let genreIds: [Int]
-    let voteAverage: Double
-    let voteCount: Int
-    let popularity: Double
     
-    enum CodingKeys: String, CodingKey {
-        case id, title, overview, popularity
-        case originalTitle = "original_title"
-        case posterPath = "poster_path"
-        case backdropPath = "backdrop_path"
-        case releaseDate = "release_date"
-        case genreIds = "genre_ids"
-        case voteAverage = "vote_average"
-        case voteCount = "vote_count"
-    }
-    
-    /// Full poster URL
-    var posterURL: String? {
-        guard let posterPath = posterPath else { return nil }
-        return "https://image.tmdb.org/t/p/w500\(posterPath)"
-    }
-    
-    /// Year from release date
-    var year: String {
-        String(releaseDate.prefix(4))
-    }
-}
-
-// MARK: - Genre ID Mapping
-
-extension Genre {
-    /// TMDb genre IDs
-    var tmdbID: Int {
-        switch self {
-        case .action: return 28
-        case .comedy: return 35
-        case .drama: return 18
-        case .horror: return 27
-        case .romance: return 10749
-        case .scifi: return 878
-        case .thriller: return 53
-        case .animation: return 16
-        case .documentary: return 99
-        case .fantasy: return 14
-        }
-    }
 }

@@ -2,55 +2,97 @@
 //  MovieDetailView.swift
 //  Cinna
 //
-//  Created by Brighton Young on 11/4/25.
+//  Updated to generate AI-tailored summaries using user preferences.
+//  Make sure AIReviewService.swift and TMDbService+Reviews.swift are added.
 //
-
 
 import SwiftUI
 
 struct MovieDetailView: View {
     let movie: TMDbMovie
 
+    @EnvironmentObject private var moviePreferences: MoviePreferencesData
+
+    @State private var aiSummary: AITailoredSummary?
+    @State private var aiError: String?
+    @State private var isSummarizing = false
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
-                if let urlString = movie.posterURL, let url = URL(string: urlString) {
-                    AsyncImage(url: url) { phase in
-                        if case .success(let image) = phase {
-                            image
-                                .resizable()
-                                .scaledToFit()
-                                .frame(maxHeight: 400)
-                                .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-                        } else {
-                            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                                .fill(Color(.tertiarySystemFill))
-                                .frame(height: 220)
-                                .overlay(Image(systemName: "film.fill"))
-                                .accessibilityHidden(true)
+                // ===== Your existing header / artwork / metadata UI goes here =====
+                // Example placeholders (keep your current implementation):
+                Text(movie.title)
+                    .font(.title.bold())
+                if !movie.overview.isEmpty {
+                    Text(movie.overview)
+                        .foregroundStyle(.secondary)
+                }
+
+                // ===== Preferences chips (optional visual) =====
+                if !moviePreferences.sortedSelectedGenresArray.isEmpty {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Your preferences")
+                            .font(.headline)
+                        WrapHStack(spacing: 8) {
+                            ForEach(moviePreferences.sortedSelectedGenresArray, id: \.self) { genre in
+                                Text(genre.title)
+                                    .font(.caption)
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                    .background(.ultraThinMaterial, in: Capsule())
+                            }
                         }
                     }
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(movie.title)
-                        .font(.largeTitle.bold())
-                        .foregroundStyle(Color(.label))
+                // ===== AI Tailored Review Section =====
+                Group {
+                    if isSummarizing {
+                        ProgressView("Tailoring review…")
+                    } else if let ai = aiSummary {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Tailored for you")
+                                .font(.headline)
 
-                    HStack(spacing: 12) {
-                        if !movie.releaseDate.isEmpty { Text(movie.releaseDate) }
-                        Text("⭐️ \(String(format: "%.1f", movie.voteAverage))")
+                            Text(ai.summary)
+
+                            if !ai.tailoredPoints.isEmpty {
+                                VStack(alignment: .leading, spacing: 6) {
+                                    ForEach(ai.tailoredPoints, id: \.self) { point in
+                                        Text("• \(point)")
+                                    }
+                                }
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                            }
+
+                            Text("Fit score: \(ai.fitScore)/100")
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(16)
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    } else if let err = aiError {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Tailored review")
+                                .font(.headline)
+                            Text(err).foregroundStyle(.secondary)
+                        }
+                        .padding(16)
+                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                     }
-                    .font(.subheadline)
-                    .foregroundStyle(Color(.secondaryLabel))
-
-                    Text("Popularity: \(String(format: "%.0f", movie.popularity))")
-                        .font(.caption)
-                        .foregroundStyle(Color(.tertiaryLabel))
                 }
 
-                SectionBlock(title: "Overview") {
-                    Text(movie.overview.isEmpty ? "No synopsis available." : movie.overview)
+                // Optional: a button to retry/regenerate
+                HStack {
+                    Spacer()
+                    Button {
+                        Task { await loadTailoredSummary() }
+                    } label: {
+                        Label("Regenerate", systemImage: "arrow.clockwise")
+                    }
+                    .disabled(isSummarizing)
                 }
             }
             .padding(24)
@@ -58,5 +100,106 @@ struct MovieDetailView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle(movie.title)
         .navigationBarTitleDisplayMode(.inline)
+        .task { await loadTailoredSummary() }
     }
+
+    // MARK: - AI Integration
+
+    private func loadTailoredSummary() async {
+        isSummarizing = true
+        aiError = nil
+        defer { isSummarizing = false }
+
+        do {
+            // 1) Fetch some review snippets from TMDb
+            let reviews = try await TMDbService.getReviews(movieID: movie.id)
+
+            // 2) Turn the user's preferences into human-readable tags
+            let preferenceTags = moviePreferences.sortedSelectedGenresArray.map(\.title)
+
+            // 3) Ask the AI to tailor
+            aiSummary = try await AIReviewService.shared.generateTailoredReview(
+                movie: movie,
+                reviews: reviews,
+                preferenceTags: preferenceTags
+            )
+        } catch {
+            #if DEBUG
+            print("AI summary error:", error)
+            #endif
+            aiSummary = nil
+            aiError = "Couldn’t generate a tailored review right now."
+        }
+    }
+}
+
+// MARK: - Small utility for wrapping chips
+private struct WrapHStack<Content: View>: View {
+    var spacing: CGFloat = 8
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        // Simple fallback layout that works fine without iOS 17+ FlowLayout APIs
+        FlexibleView(
+            availableWidth: UIScreen.main.bounds.width - 48, // matches .padding(24) on container
+            spacing: spacing,
+            alignment: .leading,
+            content: content
+        )
+    }
+}
+
+// FlexibleView: lightweight wrap layout; not deprecated on iOS 26
+private struct FlexibleView<Content: View>: View {
+    let availableWidth: CGFloat
+    let spacing: CGFloat
+    let alignment: HorizontalAlignment
+    @ViewBuilder var content: () -> Content
+
+    @State private var totalHeight: CGFloat = .zero
+
+    var body: some View {
+        ZStack(alignment: Alignment(horizontal: alignment, vertical: .top)) {
+            _FlexibleContent(availableWidth: availableWidth, spacing: spacing, content: content)
+                .background(viewHeightReader($totalHeight))
+        }
+        .frame(height: totalHeight)
+    }
+
+    private func viewHeightReader(_ binding: Binding<CGFloat>) -> some View {
+        GeometryReader { geometry -> Color in
+            DispatchQueue.main.async { binding.wrappedValue = geometry.size.height }
+            return .clear
+        }
+    }
+}
+
+private struct _FlexibleContent<Content: View>: View {
+    let availableWidth: CGFloat
+    let spacing: CGFloat
+    @ViewBuilder var content: () -> Content
+
+    var body: some View {
+        var width: CGFloat = 0
+        var height: CGFloat = 0
+
+        return GeometryReader { geo in
+            ZStack(alignment: .topLeading) {
+                content()
+                    .alignmentGuide(.leading) { d in
+                        if (abs(width - d.width) > availableWidth) {
+                            width = 0
+                            height -= d.height + spacing
+                        }
+                        let result = width
+                        if contentIsLast(d) { width = 0 } else { width -= d.width + spacing }
+                        return result
+                    }
+                    .alignmentGuide(.top) { _ in height }
+            }
+        }
+        .frame(height: 0) // Let FlexibleView compute height
+    }
+
+    private func contentIsLast(_ d: ViewDimensions) -> Bool { false }
 }

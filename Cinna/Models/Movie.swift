@@ -2,96 +2,81 @@
 //  Movie.swift
 //  Cinna
 //
-//  Created by Chao Chen on 10/27/25.
+//  Created by Brighton Young on 11/5/25.
 //
 
 import Foundation
 
-struct OMDbMovie: Codable {
+// MARK: - TMDb Models used across the app
+
+/// Paged TMDb response for lists like discover/popular/now playing.
+struct TMDbResponse: Codable {
+    let results: [TMDbMovie]
+    let page: Int
+    let totalPages: Int
+    let totalResults: Int
+
+    enum CodingKeys: String, CodingKey {
+        case results, page
+        case totalPages = "total_pages"
+        case totalResults = "total_results"
+    }
+}
+
+/// Lightweight movie model compatible with TMDb "list" endpoints.
+/// Keep this lean so list fetches remain fast; details can live in a separate model later if needed.
+struct TMDbMovie: Codable, Identifiable, Hashable {
+    let id: Int
     let title: String
-    let year: String
-    let rated: String
-    let released: String?
-    let runtime: String
-    let genre: String
-    let director: String
-    let actors: String
-    let plot: String
-    let language: String
-    let poster: String
-    let ratings: [OMDbRating]?
-    let imdbRating: String?
-    let imdbVotes: String?
-    let imdbID: String
-    
+    let originalTitle: String?
+    let overview: String
+    let posterPath: String?
+    let backdropPath: String?
+    let releaseDate: String
+    let genreIds: [Int]
+    let voteAverage: Double
+    let voteCount: Int
+    let popularity: Double
+
     enum CodingKeys: String, CodingKey {
-        case title = "Title"
-        case year = "Year"
-        case rated = "Rated"
-        case released = "Released"
-        case runtime = "Runtime"
-        case genre = "Genre"
-        case director = "Director"
-        case actors = "Actors"
-        case plot = "Plot"
-        case language = "Language"
-        case poster = "Poster"
-        case ratings = "Ratings"
-        case imdbRating
-        case imdbVotes
-        case imdbID
+        case id, title, overview, popularity
+        case originalTitle = "original_title"
+        case posterPath   = "poster_path"
+        case backdropPath = "backdrop_path"
+        case releaseDate  = "release_date"
+        case genreIds     = "genre_ids"
+        case voteAverage  = "vote_average"
+        case voteCount    = "vote_count"
+    }
+
+    /// Full poster URL for display
+    var posterURL: String? {
+        guard let posterPath else { return nil }
+        return "https://image.tmdb.org/t/p/w500\(posterPath)"
+    }
+
+    /// Year extracted from the release date (e.g., "2025")
+    var year: String {
+        String(releaseDate.prefix(4))
     }
 }
 
-// Rating from different sources (IMDb, Rotten Tomatoes, etc.)
-struct OMDbRating: Codable {
-    let source: String
-    let value: String
-    
-    enum CodingKeys: String, CodingKey {
-        case source = "Source"
-        case value = "Value"
-    }
-}
+// MARK: - Genre ↔︎ TMDb ID mapping used by discovery/recommendations
 
-// Search results from OMDb API
-struct OMDbSearchResult: Codable {
-    let search: [OMDbSearchItem]?
-    let totalResults: String?
-    let response: String
-    
-    enum CodingKeys: String, CodingKey {
-        case search = "Search"
-        case totalResults
-        case response = "Response"
-    }
-}
-
-// Individual search result item
-struct OMDbSearchItem: Codable, Identifiable, Hashable {
-    var id: String { imdbID }
-    let title: String
-    let year: String
-    let imdbID: String
-    let type: String
-    let poster: String
-    
-    enum CodingKeys: String, CodingKey {
-        case title = "Title"
-        case year = "Year"
-        case imdbID
-        case type = "Type"
-        case poster = "Poster"
-    }
-}
-
-// Error response from OMDb API
-struct OMDbError: Codable {
-    let response: String
-    let error: String
-    
-    enum CodingKeys: String, CodingKey {
-        case response = "Response"
-        case error = "Error"
+extension Genre {
+    /// TMDb genre IDs
+    var tmdbID: Int {
+        switch self {
+        case .action:      return 28
+        case .comedy:      return 35
+        case .drama:       return 18
+        case .horror:      return 27
+        case .romance:     return 10749
+        case .scifi:       return 878
+        case .thriller:    return 53
+        case .animation:   return 16
+        case .documentary: return 99
+        case .fantasy:     return 14
+        }
     }
 }

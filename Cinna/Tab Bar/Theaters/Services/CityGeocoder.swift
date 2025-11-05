@@ -5,14 +5,6 @@
 //  Created by Brighton Young on 11/4/25.
 //
 
-
-//
-//  CityGeocoder.swift
-//  Cinna
-//
-//  Created by Subhan Shrestha on 10/9/25.
-//
-
 import CoreLocation
 
 // MARK: - Lightweight async geocoder (cached)

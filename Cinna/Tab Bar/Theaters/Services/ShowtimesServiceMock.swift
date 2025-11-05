@@ -5,13 +5,6 @@
 //  Created by Subhan Shrestha on 10/9/25.
 //
 
-//
-//  ShowtimesServiceMock.swift
-//  Cinna
-//
-//  Created by Subhan Shrestha on 10/9/25.
-//
-
 import Foundation
 
 // MARK: - Showtime Model
