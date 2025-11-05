@@ -111,8 +111,12 @@ struct MovieDetailView: View {
         defer { isSummarizing = false }
 
         do {
-            // 1) Fetch some review snippets from TMDb
-            let reviews = try await TMDbService.getReviews(movieID: movie.id)
+            // 1) Kick off metadata and review fetches in parallel
+            async let reviewsTask = TMDbService.getReviews(movieID: movie.id)
+            async let detailsTask = TMDbService.getMovieDetails(movieID: movie.id)
+
+            let reviews = try await reviewsTask
+            let details = try await detailsTask
 
             // 2) Turn the user's preferences into human-readable tags
             let preferenceTags = moviePreferences.sortedSelectedGenresArray.map(\.title)
@@ -120,6 +124,7 @@ struct MovieDetailView: View {
             // 3) Ask the AI to tailor
             aiSummary = try await AIReviewService.shared.generateTailoredReview(
                 movie: movie,
+                details: details,
                 reviews: reviews,
                 preferenceTags: preferenceTags
             )

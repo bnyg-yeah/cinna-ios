@@ -79,6 +79,26 @@ struct TMDbService {
         return response.results
     }
     
+    /// Fetch detailed information for a specific movie, optionally appending extra payloads.
+    /// - Parameters:
+    ///   - movieID: The TMDb movie identifier.
+    ///   - appendFields: Extra TMDb appendable fields (e.g. credits, keywords).
+    /// - Returns: A decoded `TMDbMovieDetails` object.
+    static func getMovieDetails(
+        movieID: Int,
+        appendFields: [String] = ["keywords", "credits", "release_dates", "watch/providers"]
+    ) async throws -> TMDbMovieDetails {
+        var queryItems: [URLQueryItem] = []
+        if !appendFields.isEmpty {
+            let appendValue = appendFields.joined(separator: ",")
+            queryItems.append(URLQueryItem(name: "append_to_response", value: appendValue))
+        }
+
+        let url = try makeURL("/movie/\(movieID)", query: queryItems)
+        let details: TMDbMovieDetails = try await APIClient.getJSON(url)
+        return details
+    }
+    
     // Keep this in TMDbService.swift so it can access the private constants.
     static func makeURL(_ path: String, query: [URLQueryItem] = []) throws -> URL {
         var components = URLComponents(string: "\(baseURL)\(path)")

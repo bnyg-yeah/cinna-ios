@@ -2,81 +2,172 @@
 //  Movie.swift
 //  Cinna
 //
-//  Created by Brighton Young on 11/5/25.
+//  Created by Team Cinna on 11/5/25.
 //
 
 import Foundation
 
-// MARK: - TMDb Models used across the app
+// MARK: - List responses
 
-/// Paged TMDb response for lists like discover/popular/now playing.
-struct TMDbResponse: Codable {
+struct TMDbResponse: Decodable {
     let results: [TMDbMovie]
-    let page: Int
-    let totalPages: Int
-    let totalResults: Int
-
-    enum CodingKeys: String, CodingKey {
-        case results, page
-        case totalPages = "total_pages"
-        case totalResults = "total_results"
-    }
 }
 
-/// Lightweight movie model compatible with TMDb "list" endpoints.
-/// Keep this lean so list fetches remain fast; details can live in a separate model later if needed.
-struct TMDbMovie: Codable, Identifiable, Hashable {
+// MARK: - Basic movie used by lists
+
+struct TMDbMovie: Decodable, Identifiable, Hashable {
     let id: Int
     let title: String
-    let originalTitle: String?
     let overview: String
+    let releaseDate: String?
     let posterPath: String?
-    let backdropPath: String?
-    let releaseDate: String
-    let genreIds: [Int]
-    let voteAverage: Double
-    let voteCount: Int
-    let popularity: Double
+
+    // Handy computed year for prompts/UI
+    var year: String {
+        guard let releaseDate, releaseDate.count >= 4 else { return "" }
+        return String(releaseDate.prefix(4))
+    }
 
     enum CodingKeys: String, CodingKey {
-        case id, title, overview, popularity
-        case originalTitle = "original_title"
-        case posterPath   = "poster_path"
-        case backdropPath = "backdrop_path"
-        case releaseDate  = "release_date"
-        case genreIds     = "genre_ids"
-        case voteAverage  = "vote_average"
-        case voteCount    = "vote_count"
-    }
-
-    /// Full poster URL for display
-    var posterURL: String? {
-        guard let posterPath else { return nil }
-        return "https://image.tmdb.org/t/p/w500\(posterPath)"
-    }
-
-    /// Year extracted from the release date (e.g., "2025")
-    var year: String {
-        String(releaseDate.prefix(4))
+        case id, title, overview
+        case releaseDate = "release_date"
+        case posterPath = "poster_path"
     }
 }
 
-// MARK: - Genre ↔︎ TMDb ID mapping used by discovery/recommendations
+// MARK: - Detailed movie payload (for /movie/{id}?append_to_response=...)
 
-extension Genre {
-    /// TMDb genre IDs
-    var tmdbID: Int {
-        switch self {
-        case .action:      return 28
-        case .comedy:      return 35
-        case .drama:       return 18
-        case .horror:      return 27
-        case .romance:     return 10749
-        case .scifi:       return 878
-        case .thriller:    return 53
-        case .animation:   return 16
-        case .documentary: return 99
-        case .fantasy:     return 14
+struct TMDbMovieDetails: Decodable {
+    let id: Int
+    let runtime: Int?
+    let tagline: String?
+    let genres: [Genre]
+
+    let credits: Credits?
+    let keywords: Keywords?
+    let productionCountries: [ProductionCountry]
+    let spokenLanguages: [SpokenLanguage]
+
+    let voteAverage: Double
+    let voteCount: Int
+
+    let releaseDates: ReleaseDates?
+    let watchProviders: WatchProvidersResponse?
+
+    enum CodingKeys: String, CodingKey {
+        case id, runtime, tagline, genres, credits, keywords
+        case productionCountries = "production_countries"
+        case spokenLanguages = "spoken_languages"
+        case voteAverage = "vote_average"
+        case voteCount = "vote_count"
+        case releaseDates = "release_dates"
+        case watchProviders = "watch/providers"
+    }
+
+    // MARK: - Nested types
+
+    struct Genre: Decodable, Hashable {
+        let id: Int
+        let name: String
+    }
+
+    struct Credits: Decodable {
+        let cast: [CastMember]?
+        let crew: [CrewMember]?
+    }
+
+    struct CastMember: Decodable, Hashable {
+        let id: Int
+        let name: String
+        let character: String?
+        let order: Int?
+
+        enum CodingKeys: String, CodingKey {
+            case id, name, character, order
+        }
+    }
+
+    struct CrewMember: Decodable, Hashable {
+        let id: Int
+        let name: String
+        let job: String?
+        let department: String?
+    }
+
+    struct Keywords: Decodable {
+        let keywords: [Keyword]?
+
+        struct Keyword: Decodable, Hashable {
+            let id: Int
+            let name: String
+        }
+    }
+
+    struct ProductionCountry: Decodable, Hashable {
+        let iso3166_1: String
+        let name: String
+
+        enum CodingKeys: String, CodingKey {
+            case iso3166_1 = "iso_3166_1"
+            case name
+        }
+    }
+
+    struct SpokenLanguage: Decodable, Hashable {
+        let englishName: String
+        let name: String
+
+        enum CodingKeys: String, CodingKey {
+            case englishName = "english_name"
+            case name
+        }
+    }
+
+    struct ReleaseDates: Decodable {
+        let results: [CountryRelease]
+
+        struct CountryRelease: Decodable {
+            let iso3166_1: String
+            let releaseDates: [ReleaseDateItem]
+
+            enum CodingKeys: String, CodingKey {
+                case iso3166_1 = "iso_3166_1"
+                case releaseDates = "release_dates"
+            }
+        }
+
+        struct ReleaseDateItem: Decodable {
+            let certification: String?
+            let releaseDate: String?
+
+            enum CodingKeys: String, CodingKey {
+                case certification
+                case releaseDate = "release_date"
+            }
+        }
+    }
+
+    // Optional: watch/providers (you’re appending it in API)
+    struct WatchProvidersResponse: Decodable {
+        let results: [String: WatchProviderCountry]?
+    }
+
+    struct WatchProviderCountry: Decodable {
+        let link: String?
+        let flatrate: [WatchProvider]?
+        let rent: [WatchProvider]?
+        let buy: [WatchProvider]?
+    }
+
+    struct WatchProvider: Decodable, Hashable {
+        let providerId: Int
+        let providerName: String
+        let logoPath: String?
+
+        enum CodingKeys: String, CodingKey {
+            case providerId = "provider_id"
+            case providerName = "provider_name"
+            case logoPath = "logo_path"
         }
     }
 }
