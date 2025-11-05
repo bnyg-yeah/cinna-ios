@@ -37,6 +37,19 @@ enum Genre: String, CaseIterable, Identifiable {
         case .documentary: return "doc.text.fill"
         }
     }
+
+    var tmdbID: Int {
+        switch self {
+        case .action: return 28
+        case .comedy: return 35
+        case .drama: return 18
+        case .thriller: return 53
+        case .horror: return 27
+        case .scifi: return 878
+        case .fantasy: return 14
+        case .romance: return 10749
+        case .animation: return 16
+        case .documentary: return 99
+        }
+    }
 }
-
-

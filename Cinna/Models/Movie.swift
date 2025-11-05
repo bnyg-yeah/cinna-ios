@@ -21,17 +21,26 @@ struct TMDbMovie: Decodable, Identifiable, Hashable {
     let overview: String
     let releaseDate: String?
     let posterPath: String?
+    let voteAverage: Double
 
     // Handy computed year for prompts/UI
     var year: String {
         guard let releaseDate, releaseDate.count >= 4 else { return "" }
         return String(releaseDate.prefix(4))
     }
+    
+    var posterURL: String? {
+        guard let posterPath else {
+            return nil
+        }
+        return "https://image.tmdb.org/t/p/w500\(posterPath)"
+    }
 
     enum CodingKeys: String, CodingKey {
         case id, title, overview
         case releaseDate = "release_date"
         case posterPath = "poster_path"
+        case voteAverage = "vote_average"
     }
 }
 
