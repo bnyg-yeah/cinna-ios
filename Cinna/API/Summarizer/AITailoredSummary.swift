@@ -190,94 +190,80 @@ final class AIReviewService {
         dataPoints: VerifiedDataPoints,
         preferenceTags: [String]
     ) -> String {
-        
-        // Build factual information section
         var facts: [String] = []
         facts.append("Title: \(movie.title)")
         facts.append("Year: \(movie.year)")
-        facts.append("Runtime: \(dataPoints.runtime)")
-        facts.append("TMDb Rating: \(dataPoints.rating) from \(dataPoints.voteCount) votes")
-        facts.append("Genres: \(dataPoints.genres.isEmpty ? "Not specified" : dataPoints.genres.joined(separator: ", "))")
-        
+
+        let genreMatches = dataPoints.genres.filter { g in
+            preferenceTags.contains { $0.lowercased() == g.lowercased() }
+        }
+        let focusGenres = genreMatches.isEmpty ? preferenceTags : genreMatches
+
+        // Put matched genres first and keep the full list separately for grounding only
+        facts.append("Focus genres: \(focusGenres.isEmpty ? "None" : focusGenres.joined(separator: ", "))")
+        facts.append("All genres: \(dataPoints.genres.isEmpty ? "Not specified" : dataPoints.genres.joined(separator: ", "))")
+
         if !dataPoints.tagline.isEmpty {
             facts.append("Tagline: \(dataPoints.tagline)")
         }
-        
-        if let cert = dataPoints.certification {
-            facts.append("Rating: \(cert)")
-        }
-        
         if !dataPoints.directors.isEmpty {
             facts.append("Director(s): \(dataPoints.directors.joined(separator: ", "))")
         }
-        
         if !dataPoints.castMembers.isEmpty {
             let castString = dataPoints.castMembers.prefix(5)
                 .map { "\($0.name) as \($0.character)" }
                 .joined(separator: ", ")
             facts.append("Main Cast: \(castString)")
         }
-        
         if !dataPoints.keywords.isEmpty {
             facts.append("Themes/Keywords: \(dataPoints.keywords.joined(separator: ", "))")
         }
-        
-        if !dataPoints.streamingProviders.isEmpty {
-            facts.append("Streaming on: \(dataPoints.streamingProviders.joined(separator: ", "))")
-        }
-        
-        // Genre matching analysis for the AI
-        let genreMatches = dataPoints.genres.filter { genre in
-            preferenceTags.contains { pref in
-                pref.lowercased() == genre.lowercased()
-            }
-        }
-        
+
         let preferenceAnalysis = """
         User's preferred genres: \(preferenceTags.isEmpty ? "No specific preferences" : preferenceTags.joined(separator: ", "))
         Movie's genres: \(dataPoints.genres.joined(separator: ", "))
-        Matching genres: \(genreMatches.isEmpty ? "None" : genreMatches.joined(separator: ", "))
+        Matching genres (focus): \(focusGenres.isEmpty ? "None" : focusGenres.joined(separator: ", "))
         """
-        
-        // Build the complete prompt
+
         let prompt = """
-        Please creates movie overviews that are tailored to the user preferences. First off, consider the user preferences. From all the movie information that you receive, you should create a summary revolving around only what the user preferences. The summary should be attractive to the user because it is not a generic plot summary, but actually shows them what they care about.
-        
+        Create a movie overview tailored strictly to the user's focus genres. Center the writeup on the focus genres only. Non-focus genres may be mentioned once at most and only as background.
+
         MOVIE FACTS:
         \(facts.map { "• \($0)" }.joined(separator: "\n"))
-        
+
         PLOT OVERVIEW:
         \(movie.overview)
-        
-        REVIEW EXCERPTS (these may give a broader picture of the movie, and you may the reviews if they are relevant and helpful to the overview):
+
+        REVIEW EXCERPTS:
         \(dataPoints.reviewExcerpts.isEmpty ? "No reviews available" : dataPoints.reviewExcerpts.enumerated().map { "Review \($0.offset + 1): \($0.element)" }.joined(separator: "\n"))
-        
+
         PREFERENCE MATCHING:
         \(preferenceAnalysis)
-        
-        STRICT RULES:
-        1. Use ONLY the facts provided above - do not invent or assume any information
-        2. If user preferences match the movie's genres, emphasize those aspects
-        3. If preferences don't match, honestly indicate this in the fit score
-        4. Reference specific cast, director, or keywords ONLY if they appear in the facts above and are relevant to your analysis
-        5. Keep the summary between 100-300 words
-        6. Fit score should reflect: 85-100 if user preferences match very well, 65-84 if partial match, 30-64 if poor match, 0-29 for bad match
-        7. Use keywords/themes naturally only when they strengthen your analysis - don't force them in
-        8. Output in an easy to read format
-        
+
+        RULES:
+        1) Begin with one sentence that directly addresses why this is a strong fit for the focus genres (e.g., “If you love Comedy, ...”).
+        2) At least 70% of sentences must develop the focus genres with concrete elements from the facts or reviews.
+        3) Do not include runtime, numeric ratings, vote counts, certifications, or streaming platforms in the summary.
+        4) Cast, director, or keywords are allowed only when they reinforce the focus genres.
+        5) Keep the summary between 100 and 300 words.
+        6) Tailored points must each map explicitly to a focus genre element.
+        7) Fit score must primarily reflect alignment with the focus genres.
+
         OUTPUT FORMAT (strict JSON):
         {
-          "summary": "A 100-300 word summary emphasizing aspects relevant to user preferences, using ONLY provided information",
-          "tailoredPoints": ["Create 3-4 bullet points about the movie that relate to the user's preferences (or note if they don't match)"],
+          "summary": "100-300 words focused on the user's focus genres",
+          "tailoredPoints": ["3-4 bullets, each tied to a focus-genre element"],
           "fitScore": 0-100,
-          "dataSourcesUsed": ["List which data categories you referenced: genres, cast, keywords, reviews, etc."]
+          "dataSourcesUsed": ["genres", "cast", "keywords", "reviews"]
         }
-        
-        Return ONLY valid JSON, no additional text.
+
+        Return only valid JSON.
         """
-        
+
         return prompt
     }
+
+
 
     // MARK: - API Call
 
