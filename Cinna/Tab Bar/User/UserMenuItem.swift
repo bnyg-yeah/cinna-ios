@@ -20,6 +20,7 @@ struct UserMenuItem: View {
             
             Text(title)
                 .font(.headline)
+                .foregroundStyle(.primary)
             
             Spacer()
             

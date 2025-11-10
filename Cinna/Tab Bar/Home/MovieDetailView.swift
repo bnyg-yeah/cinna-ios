@@ -138,7 +138,6 @@ struct MovieDetailView: View {
             }
             .padding(24)
         }
-        .background(BackgroundView())
         .navigationTitle(Text("Selected Movie"))
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadTailoredSummary() }

@@ -21,13 +21,13 @@ struct MovieCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 Text(movie.title)
                     .font(.headline)
-                    .foregroundStyle(Color(.label))
+                    .foregroundStyle(.primary)
                     .accessibilityAddTraits(.isHeader)
 
                 if !movie.overview.isEmpty {
                     Text(movie.overview)
                         .font(.caption)
-                        .foregroundStyle(Color(.secondaryLabel))
+                        .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
 
@@ -35,7 +35,7 @@ struct MovieCard: View {
                     if let year = movie.year.nonEmpty {
                         Label(year, systemImage: "calendar")
                             .font(.caption)
-                            .foregroundStyle(Color(.secondaryLabel))
+                            .foregroundStyle(.secondary)
                     }
                     RatingBadge(text: String(format: "⭐️ %.1f", movie.voteAverage))
                 }

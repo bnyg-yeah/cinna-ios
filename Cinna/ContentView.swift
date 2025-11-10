@@ -19,9 +19,6 @@ struct ContentView: View {
     @State private var selectedTab: Tab = .home
     
     var body: some View {
-        ZStack {
-            Color(.systemBackground)
-                .ignoresSafeArea()
             
             if userHasCompletedLogin {
                 TabView(selection: $selectedTab) {
@@ -44,6 +41,7 @@ struct ContentView: View {
                         .tag(Tab.user)
                     
                 }
+                .background(BackgroundView())
                 
             } //end if userHasCompletedLogin
             else {
@@ -52,7 +50,6 @@ struct ContentView: View {
                     //this should stay true for the rest of the time that the user has the app installed
                 }
             }
-        }
     }
     
 }

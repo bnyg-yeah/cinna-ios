@@ -40,15 +40,17 @@ struct User: View {
 
                     (Text("My \(Text("Cinna").italic())"))
                         .font(.title.bold())
+                        .foregroundStyle(.white)
                         .frame(maxWidth: .infinity, alignment: .center)
 
                     VStack(alignment: .center, spacing: 6) {
                         Text("Member since October 2, 2025")
                             .font(.headline)
+                            .foregroundStyle(.white)
                         Text(
                             "Thank you for being an \(Text("OG").bold()) \(Text("Cinna").italic()) !"
                         )
-                        .foregroundStyle(.secondary)
+                        .foregroundStyle(.white.opacity(0.8))
                     }
                     .padding(.top, 8)
                     .padding(.bottom, 16)
@@ -145,6 +147,7 @@ private struct NotificationDropdown: View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Notifications")
                 .font(.headline)
+                .foregroundStyle(.primary)
 
             if notifications.isEmpty {
                 Text("You're all caught up!")
@@ -154,6 +157,7 @@ private struct NotificationDropdown: View {
                     VStack(alignment: .leading, spacing: 4) {
                         Text(notification.title)
                             .font(.subheadline.weight(.semibold))
+                            .foregroundStyle(.primary)
                         Text(notification.message)
                             .font(.footnote)
                             .foregroundStyle(.secondary)

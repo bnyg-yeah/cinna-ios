@@ -34,12 +34,12 @@ struct Home: View {
                             VStack(alignment: .leading, spacing: 8) {
                                 Text("Recommended Movies")
                                     .font(.title.bold())
-                                    .foregroundStyle(Color(.label))
+                                    .foregroundStyle(.white)
 
                                 if !moviePreferences.selectedGenres.isEmpty {
                                     Text("Based on: \(moviePreferences.sortedSelectedGenresString)")
                                         .font(.subheadline)
-                                        .foregroundStyle(Color(.secondaryLabel))
+                                        .foregroundStyle(.white.opacity(0.8))
                                 }
                             }
 
@@ -56,7 +56,6 @@ struct Home: View {
                     }
                 }
             }
-            .background(BackgroundView())
             .navigationDestination(for: TMDbMovie.self) { movie in
                 MovieDetailView(movie: movie)
             }
@@ -104,7 +103,7 @@ private struct ErrorStateView: View {
 
             Text(message)
                 .font(.body)
-                .foregroundStyle(Color(.secondaryLabel))
+                .foregroundStyle(.white)
                 .multilineTextAlignment(.center)
 
             Button("Retry", action: onRetry)
@@ -123,12 +122,12 @@ private struct EmptyStateView: View {
         VStack(spacing: 12) {
             Image(systemName: systemImage)
                 .font(.system(size: 48))
-                .foregroundStyle(Color(.secondaryLabel))
+                .foregroundStyle(.white.opacity(0.7))
                 .accessibilityHidden(true)
 
             Text(title)
                 .font(.headline)
-                .foregroundStyle(Color(.label))
+                .foregroundStyle(.white)
         }
         .padding(40)
         .frame(maxWidth: .infinity)
