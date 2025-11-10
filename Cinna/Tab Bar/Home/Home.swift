@@ -56,7 +56,7 @@ struct Home: View {
                     }
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(BackgroundView())
             .navigationDestination(for: TMDbMovie.self) { movie in
                 MovieDetailView(movie: movie)
             }
