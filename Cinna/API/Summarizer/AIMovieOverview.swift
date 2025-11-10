@@ -1,5 +1,5 @@
 //
-//  AITailoredSummary_Enhanced.swift
+//  AIMovieOverview.swift
 //  Cinna
 //
 //  Enhanced version with strict data grounding to prevent hallucination
@@ -9,14 +9,14 @@ import Foundation
 
 // MARK: - Models
 
-struct AITailoredSummary: Codable {
+struct AIMovieOverview: Codable {
     let summary: String
     let tailoredPoints: [String]
     let fitScore: Int
     let dataSourcesUsed: [String]? // Track what data was used
 }
 
-enum AIReviewError: Error {
+enum AIOverviewError: Error {
     case noCandidates
     case decodingFailed
     case missingAPIKey
@@ -25,8 +25,8 @@ enum AIReviewError: Error {
 
 // MARK: - Enhanced Service with Strict Data Grounding
 
-final class AIReviewService {
-    static let shared = AIReviewService()
+final class AIOverviewService {
+    static let shared = AIOverviewService()
     private init() {}
 
     private var apiKey: String {
@@ -34,13 +34,13 @@ final class AIReviewService {
     }
 
     /// Enhanced method that strictly grounds the AI response in provided data
-    func generateTailoredReview(
+    func generateTailoredOverview(
         movie: TMDbMovie,
         details: TMDbMovieDetails,
         reviews: [TMDbService.TMDbReview],
         preferenceTags: [String]
-    ) async throws -> AITailoredSummary {
-        guard !apiKey.isEmpty else { throw AIReviewError.missingAPIKey }
+    ) async throws -> AIMovieOverview {
+        guard !apiKey.isEmpty else { throw AIOverviewError.missingAPIKey }
 
         // 1. Collect and validate all data points
         let dataPoints = extractVerifiedDataPoints(
@@ -75,7 +75,7 @@ final class AIReviewService {
         let summary = try await callGeminiAPI(prompt: prompt)
         
         // 4. Validate the response is grounded in data
-        return validateAndReturnSummary(summary, dataPoints: dataPoints)
+        return validateAndReturnOverview(summary, dataPoints: dataPoints)
     }
 
     // MARK: - Data Extraction with Validation
@@ -267,7 +267,7 @@ final class AIReviewService {
 
     // MARK: - API Call
 
-    private func callGeminiAPI(prompt: String) async throws -> AITailoredSummary {
+    private func callGeminiAPI(prompt: String) async throws -> AIMovieOverview {
         // Ordered list of model endpoints
         let modelEndpoints = [
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
@@ -330,7 +330,7 @@ final class AIReviewService {
                     #if DEBUG
                     print("⚠️ Rate limit for endpoint: \(endpoint) (HTTP 429)")
                     #endif
-                    lastError = AIReviewError.insufficientData
+                    lastError = AIOverviewError.insufficientData
                     continue
                 }
                 
@@ -339,15 +339,15 @@ final class AIReviewService {
                     let text = decoded.candidates?.first?.content.parts.first?.text,
                     !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
                 else {
-                    throw AIReviewError.noCandidates
+                    throw AIOverviewError.noCandidates
                 }
                 
                 let cleaned = Self.extractJSONObject(from: text)
                 if let jsonData = cleaned.data(using: .utf8),
-                   let parsed = try? JSONDecoder().decode(AITailoredSummary.self, from: jsonData) {
+                   let parsed = try? JSONDecoder().decode(AIMovieOverview.self, from: jsonData) {
                     return parsed
                 } else {
-                    throw AIReviewError.decodingFailed
+                    throw AIOverviewError.decodingFailed
                 }
             } catch {
                 lastError = error
@@ -358,20 +358,20 @@ final class AIReviewService {
             }
         }
         
-        throw lastError ?? AIReviewError.noCandidates
+        throw lastError ?? AIOverviewError.noCandidates
     }
 
 
 
     // MARK: - Response Validation
 
-    private func validateAndReturnSummary(
-        _ summary: AITailoredSummary,
+    private func validateAndReturnOverview(
+        _ overview: AIMovieOverview,
         dataPoints: VerifiedDataPoints
-    ) -> AITailoredSummary {
-        // Could add additional validation here to ensure the summary
+    ) -> AIMovieOverview {
+        // Could add additional validation here to ensure the overview
         // doesn't contain information not in dataPoints
-        return summary
+        return overview
     }
 
     // MARK: - Helpers
