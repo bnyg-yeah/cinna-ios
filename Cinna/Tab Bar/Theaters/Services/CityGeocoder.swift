@@ -6,6 +6,7 @@
 //
 
 import CoreLocation
+import MapKit
 
 // MARK: - Lightweight async geocoder (cached)
 actor CityGeocoder {
@@ -27,30 +28,37 @@ actor CityGeocoder {
         #endif
 
         let location = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        
+        guard let request = MKReverseGeocodingRequest(location: location) else {
+            return nil
+        }
+        
         do {
-            let placemarks = try await CLGeocoder().reverseGeocodeLocation(location)
-            guard let p = placemarks.first else { return nil }
+            let mapItems = try await request.mapItems
+            guard let mapItem = mapItems.first else { return nil }
+            
+            let placemark = mapItem.placemark
 
             // Prefer locality + admin area (e.g., "Blacksburg, VA")
-            if let city = p.locality, let region = p.administrativeArea, !city.isEmpty {
+            if let city = placemark.locality, let region = placemark.administrativeArea, !city.isEmpty {
                 let value = "\(city), \(region)"
                 cache[key] = value
                 return value
             }
 
             // Fallbacks: subLocality, name, or country
-            if let sub = p.subLocality, let region = p.administrativeArea, !sub.isEmpty {
+            if let sub = placemark.subLocality, let region = placemark.administrativeArea, !sub.isEmpty {
                 let value = "\(sub), \(region)"
                 cache[key] = value
                 return value
             }
 
-            if let name = p.name, !name.isEmpty {
+            if let name = placemark.name, !name.isEmpty {
                 cache[key] = name
                 return name
             }
 
-            if let country = p.country {
+            if let country = placemark.country {
                 cache[key] = country
                 return country
             }

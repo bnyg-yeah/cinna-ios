@@ -34,6 +34,7 @@ struct MovieDetailView: View {
                 if let d = movieDetails {
                     let runtimeText: String = {
                         guard let r = d.runtime, r > 0 else { return "N/A" }
+                        //Formats the minutes into hours and minutes
                         let h = r / 60
                         let m = r % 60
                         return h > 0 ? "\(h)h \(String(format: "%02d", m))m" : "\(m)m"
@@ -50,22 +51,30 @@ struct MovieDetailView: View {
                     }()
 
                     let scoreText = String(format: "%.1f/10", d.voteAverage)
-
-                    VStack(alignment: .leading, spacing: 8) {
-                        HStack(spacing: 12) {
-                            if !movie.year.isEmpty {
-                                Text("Year \(movie.year)")
-                            }
-                            Divider()
-                            Text("Runtime \(runtimeText)")
-                            Divider()
-                            Text("Score \(scoreText)")
-                            Divider()
-                            Text("Rated \(certificationText)")
-                        }
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+                    
+                    let dateText: String = {
+                        guard let releaseDate = movie.releaseDate, !releaseDate.isEmpty else { return "N/A" }
+                        
+                        let formatter = DateFormatter()
+                        formatter.dateFormat = "yyyy-MM-dd"
+                        
+                        guard let date = formatter.date(from: releaseDate) else { return "N/A" }
+                        
+                        formatter.dateFormat = "MMMM yyyy"
+                        return formatter.string(from: date)
+                    }()
+                    
+                    HStack(spacing: 14) {
+                        Text("Released \(dateText)")
+                        Divider()
+                        Text("Runtime \(runtimeText)")
+                        Divider()
+                        Text("Score \(scoreText)")
+                        Divider()
+                        Text("Rating \(certificationText)")
                     }
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
                 }
 
                 // ===== Preferences chips (visual only) =====

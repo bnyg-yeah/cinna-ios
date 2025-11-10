@@ -245,14 +245,14 @@ final class AIReviewService {
         2) At least 70% of sentences must develop the focus genres with concrete elements from the facts or reviews.
         3) Do not include runtime, numeric ratings, vote counts, certifications, or streaming platforms in the summary.
         4) Cast, director, or keywords are allowed only when they reinforce the focus genres.
-        5) Keep the summary between 100 and 300 words.
+        5) Keep the summary between 100 and 300 words, and the summary should be easy to read and understand.
         6) Tailored points must each map explicitly to a focus genre element.
         7) Fit score must primarily reflect alignment with the focus genres.
 
         OUTPUT FORMAT (strict JSON):
         {
-          "summary": "100-300 words focused on the user's focus genres",
-          "tailoredPoints": ["3-4 bullets, each tied to a focus-genre element"],
+          "summary": "100-300 words focused on the user's preferences",
+          "tailoredPoints": ["3-4 bullets, each tied to a user preference element"],
           "fitScore": 0-100,
           "dataSourcesUsed": ["genres", "cast", "keywords", "reviews"]
         }
@@ -268,6 +268,13 @@ final class AIReviewService {
     // MARK: - API Call
 
     private func callGeminiAPI(prompt: String) async throws -> AITailoredSummary {
+        // Ordered list of model endpoints
+        let modelEndpoints = [
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent",
+            "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent",
+        ]
+        
         struct RequestBody: Codable {
             struct Part: Codable { let text: String }
             struct Content: Codable { let parts: [Part] }
@@ -280,27 +287,6 @@ final class AIReviewService {
             let generationConfig: GenerationConfig?
         }
 
-        let body = RequestBody(
-            contents: [.init(parts: [.init(text: prompt)])],
-            generationConfig: .init(
-                temperature: 0.2, // Lower temperature for more consistent, factual output
-                maxOutputTokens: 500,
-                responseMimeType: "application/json"
-            )
-        )
-
-        var req = URLRequest(url: URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent")!)
-        req.httpMethod = "POST"
-        req.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        req.setValue(apiKey, forHTTPHeaderField: "X-Goog-Api-Key")
-        req.httpBody = try JSONEncoder().encode(body)
-
-        #if DEBUG
-        print("🚀 Sending request to Gemini API...")
-        #endif
-
-        let (data, _) = try await URLSession.shared.data(for: req)
-
         struct GeminiResponse: Codable {
             struct Candidate: Codable {
                 struct Content: Codable {
@@ -311,37 +297,71 @@ final class AIReviewService {
             }
             let candidates: [Candidate]?
         }
-
-        let response = try JSONDecoder().decode(GeminiResponse.self, from: data)
-
-        guard
-            let text = response.candidates?.first?.content.parts.first?.text,
-            !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-        else {
-            throw AIReviewError.noCandidates
-        }
-
-        #if DEBUG
-        print("✅ Received response from Gemini")
-        print("📄 Raw response: \(text.prefix(200))...")
-        #endif
-
-        // Extract JSON
-        let cleaned = Self.extractJSONObject(from: text)
-
-        if let jsonData = cleaned.data(using: .utf8),
-           let parsed = try? JSONDecoder().decode(AITailoredSummary.self, from: jsonData) {
-            return parsed
-        } else {
-            // Fallback with conservative response
-            return AITailoredSummary(
-                summary: "Unable to generate a tailored summary at this time.",
-                tailoredPoints: ["Movie data is being processed"],
-                fitScore: 50,
-                dataSourcesUsed: []
+        
+        let body = RequestBody(
+            contents: [.init(parts: [.init(text: prompt)])],
+            generationConfig: .init(
+                temperature: 0.2,
+                maxOutputTokens: 500,
+                responseMimeType: "application/json"
             )
+        )
+        let bodyData = try JSONEncoder().encode(body)
+        
+        var lastError: Error?
+        
+        for endpoint in modelEndpoints {
+            do {
+                var req = URLRequest(url: URL(string: endpoint)!)
+                req.httpMethod = "POST"
+                req.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                req.setValue(apiKey, forHTTPHeaderField: "X-Goog-Api-Key")
+                req.httpBody = bodyData
+                
+                #if DEBUG
+                print("🚀 Trying Gemini endpoint: \(endpoint)")
+                #endif
+                
+                let (data, response) = try await URLSession.shared.data(for: req)
+                
+                // Optionally inspect response for status code
+                if let http = response as? HTTPURLResponse, http.statusCode == 429 {
+                    // Rate limit hit, skip this endpoint
+                    #if DEBUG
+                    print("⚠️ Rate limit for endpoint: \(endpoint) (HTTP 429)")
+                    #endif
+                    lastError = AIReviewError.insufficientData
+                    continue
+                }
+                
+                let decoded = try JSONDecoder().decode(GeminiResponse.self, from: data)
+                guard
+                    let text = decoded.candidates?.first?.content.parts.first?.text,
+                    !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                else {
+                    throw AIReviewError.noCandidates
+                }
+                
+                let cleaned = Self.extractJSONObject(from: text)
+                if let jsonData = cleaned.data(using: .utf8),
+                   let parsed = try? JSONDecoder().decode(AITailoredSummary.self, from: jsonData) {
+                    return parsed
+                } else {
+                    throw AIReviewError.decodingFailed
+                }
+            } catch {
+                lastError = error
+                #if DEBUG
+                print("⚠️ Endpoint failed: \(endpoint) with error: \(error)")
+                #endif
+                continue
+            }
         }
+        
+        throw lastError ?? AIReviewError.noCandidates
     }
+
+
 
     // MARK: - Response Validation
 
