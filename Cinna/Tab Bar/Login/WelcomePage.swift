@@ -37,7 +37,9 @@ struct WelcomeView: View {
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.loginPrimary)
+            .glassEffect()
             .padding(.top, 12)
+            
         }
         .padding()
     }

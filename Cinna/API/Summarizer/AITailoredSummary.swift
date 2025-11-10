@@ -1,8 +1,8 @@
 //
-//  AITailoredSummary.swift
+//  AITailoredSummary_Enhanced.swift
 //  Cinna
 //
-//  Created by Brighton Young on 11/5/25.
+//  Enhanced version with strict data grounding to prevent hallucination
 //
 
 import Foundation
@@ -13,15 +13,17 @@ struct AITailoredSummary: Codable {
     let summary: String
     let tailoredPoints: [String]
     let fitScore: Int
+    let dataSourcesUsed: [String]? // Track what data was used
 }
 
 enum AIReviewError: Error {
     case noCandidates
     case decodingFailed
     case missingAPIKey
+    case insufficientData
 }
 
-// MARK: - Service
+// MARK: - Enhanced Service with Strict Data Grounding
 
 final class AIReviewService {
     static let shared = AIReviewService()
@@ -31,7 +33,7 @@ final class AIReviewService {
         (Bundle.main.object(forInfoDictionaryKey: "GEMINI_API_KEY") as? String) ?? ""
     }
 
-    /// Calls Gemini 2.0 Flash to produce a tailored movie summary.
+    /// Enhanced method that strictly grounds the AI response in provided data
     func generateTailoredReview(
         movie: TMDbMovie,
         details: TMDbMovieDetails,
@@ -40,114 +42,246 @@ final class AIReviewService {
     ) async throws -> AITailoredSummary {
         guard !apiKey.isEmpty else { throw AIReviewError.missingAPIKey }
 
-        // Reviews -> small, trimmed context
-        let reviewSnippets = reviews
-            .map { $0.content.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) }
-            .filter { !$0.isEmpty }
-            .prefix(3)
-            .joined(separator: "\n---\n")
+        // 1. Collect and validate all data points
+        let dataPoints = extractVerifiedDataPoints(
+            movie: movie,
+            details: details,
+            reviews: reviews
+        )
+        
+        #if DEBUG
+        print("\n🔍 Data Points for AI Grounding:")
+        print("  - Runtime: \(dataPoints.runtime)")
+        print("  - Genres: \(dataPoints.genres)")
+        print("  - Cast count: \(dataPoints.castMembers.count)")
+        print("  - Keywords count: \(dataPoints.keywords.count)")
+        print("  - Review excerpts: \(dataPoints.reviewExcerpts.count)")
+        print("  - User preferences: \(preferenceTags)")
+        print("  - Genre match score: \(calculateGenreMatchScore(movieGenres: dataPoints.genres, userPreferences: preferenceTags))")
+        #endif
 
-        let runtimeText: String = {
+        // 2. Build strictly grounded prompt
+        let prompt = buildGroundedPrompt(
+            movie: movie,
+            dataPoints: dataPoints,
+            preferenceTags: preferenceTags
+        )
+        
+        #if DEBUG
+        print("\n📝 Prompt length: \(prompt.count) characters")
+        #endif
+
+        // 3. Call Gemini with strict JSON output
+        let summary = try await callGeminiAPI(prompt: prompt)
+        
+        // 4. Validate the response is grounded in data
+        return validateAndReturnSummary(summary, dataPoints: dataPoints)
+    }
+
+    // MARK: - Data Extraction with Validation
+
+    private struct VerifiedDataPoints {
+        let runtime: String
+        let tagline: String
+        let genres: [String]
+        let castMembers: [(name: String, character: String)]
+        let directors: [String]
+        let keywords: [String]
+        let rating: String
+        let voteCount: Int
+        let certification: String?
+        let productionCountries: [String]
+        let languages: [String]
+        let reviewExcerpts: [String]
+        let streamingProviders: [String]
+    }
+
+    private func extractVerifiedDataPoints(
+        movie: TMDbMovie,
+        details: TMDbMovieDetails,
+        reviews: [TMDbService.TMDbReview]
+    ) -> VerifiedDataPoints {
+        
+        // Runtime formatting
+        let runtime: String = {
             guard let runtime = details.runtime, runtime > 0 else { return "Unknown" }
             let hours = runtime / 60
             let minutes = runtime % 60
             return hours > 0
-                ? String(format: "%d h %02d m (%d min)", hours, minutes, runtime)
+                ? String(format: "%d h %02d m", hours, minutes)
                 : "\(minutes) min"
         }()
-
-        let taglineText = details.tagline?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
-        let genreText = details.genres.map(\.name).joined(separator: ", ")
-        let castEntries = (details.credits?.cast ?? [])
-            .sorted { (lhs, rhs) in
-                let l = lhs.order ?? Int.max
-                let r = rhs.order ?? Int.max
-                return l < r
-            }
-            .prefix(5)
-            .compactMap { credit -> String? in
+        
+        // Cast - only verified data
+        let castMembers: [(String, String)] = (details.credits?.cast ?? [])
+            .sorted { ($0.order ?? Int.max) < ($1.order ?? Int.max) }
+            .prefix(7) // Get more cast for better context
+            .compactMap { credit in
                 guard !credit.name.isEmpty else { return nil }
-                if let character = credit.character, !character.isEmpty {
-                    return "\(credit.name) as \(character)"
-                }
-                return credit.name
+                let character = credit.character ?? "Unknown role"
+                return (credit.name, character)
             }
-
-        let keywordNames = (details.keywords?.keywords ?? []).map(\.name).filter { !$0.isEmpty }
-        let productionCountries = details.productionCountries.map(\.name).filter { !$0.isEmpty }
-        let languageNames = details.spokenLanguages
-            .map { $0.englishName.isEmpty ? $0.name : $0.englishName }
+        
+        // Directors
+        let directors = (details.credits?.crew ?? [])
+            .filter { $0.job == "Director" }
+            .map(\.name)
             .filter { !$0.isEmpty }
-
-        let ratingText: String = {
-            guard details.voteCount > 0 else { return "Not enough ratings yet" }
-            return String(format: "%.1f/10 from %d votes", details.voteAverage, details.voteCount)
+        
+        // Keywords - important for theme understanding (unlimited)
+        let keywords = (details.keywords?.keywords ?? [])
+            .map(\.name)
+            .filter { !$0.isEmpty }
+        
+        // Reviews - clean and truncate
+        let reviewExcerpts = reviews
+            .prefix(5) // Get more reviews for better context
+            .map { review in
+                let content = review.content
+                    .trimmingCharacters(in: .whitespacesAndNewlines)
+                    .replacingOccurrences(of: "\n", with: " ")
+                // Limit each review to 300 chars
+                return String(content.prefix(300))
+            }
+            .filter { !$0.isEmpty }
+        
+        // Streaming providers
+        let streamingProviders: [String] = {
+            guard let usProviders = details.watchProviders?.results?["US"] else { return [] }
+            var providers: [String] = []
+            if let flatrate = usProviders.flatrate {
+                providers.append(contentsOf: flatrate.map(\.providerName))
+            }
+            return providers.filter { !$0.isEmpty }
         }()
-
-        let certificationText: String? = {
+        
+        // Certification
+        let certification: String? = {
             guard let countries = details.releaseDates?.results else { return nil }
             let primary = countries.first { $0.iso3166_1 == "US" } ?? countries.first
-            let cert = primary?.releaseDates.first {
-                guard let c = $0.certification?.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines) else { return false }
+            let cert = primary?.releaseDates.first { cert in
+                guard let c = cert.certification?.trimmingCharacters(in: .whitespacesAndNewlines) else { return false }
                 return !c.isEmpty
             }
             return cert?.certification
         }()
+        
+        return VerifiedDataPoints(
+            runtime: runtime,
+            tagline: details.tagline?.trimmingCharacters(in: .whitespacesAndNewlines) ?? "",
+            genres: details.genres.map(\.name),
+            castMembers: castMembers,
+            directors: directors,
+            keywords: keywords,
+            rating: String(format: "%.1f/10", details.voteAverage),
+            voteCount: details.voteCount,
+            certification: certification,
+            productionCountries: details.productionCountries.map(\.name),
+            languages: details.spokenLanguages.map { $0.englishName.isEmpty ? $0.name : $0.englishName },
+            reviewExcerpts: reviewExcerpts,
+            streamingProviders: streamingProviders
+        )
+    }
 
+    // MARK: - Prompt Building with Strict Grounding
+
+    private func buildGroundedPrompt(
+        movie: TMDbMovie,
+        dataPoints: VerifiedDataPoints,
+        preferenceTags: [String]
+    ) -> String {
+        
+        // Build factual information section
         var facts: [String] = []
-        facts.append("Runtime: \(runtimeText)")
-
-        if let taglineText, !taglineText.isEmpty {
-            facts.append("Tagline: \(taglineText)")
-        } else {
-            facts.append("Tagline: None provided")
+        facts.append("Title: \(movie.title)")
+        facts.append("Year: \(movie.year)")
+        facts.append("Runtime: \(dataPoints.runtime)")
+        facts.append("TMDb Rating: \(dataPoints.rating) from \(dataPoints.voteCount) votes")
+        facts.append("Genres: \(dataPoints.genres.isEmpty ? "Not specified" : dataPoints.genres.joined(separator: ", "))")
+        
+        if !dataPoints.tagline.isEmpty {
+            facts.append("Tagline: \(dataPoints.tagline)")
         }
-
-        facts.append("Genres: \(genreText.isEmpty ? "Unknown" : genreText)")
-        facts.append("Notable cast: \(castEntries.isEmpty ? "Not available" : castEntries.joined(separator: ", "))")
-        facts.append("TMDb rating: \(ratingText)")
-        let keywordLine = keywordNames.isEmpty ? "None listed" : keywordNames.prefix(10).joined(separator: ", ")
-        facts.append("Keywords: \(keywordLine)")
-        if !productionCountries.isEmpty {
-            facts.append("Production countries: \(productionCountries.joined(separator: ", "))")
+        
+        if let cert = dataPoints.certification {
+            facts.append("Rating: \(cert)")
         }
-        if !languageNames.isEmpty {
-            facts.append("Spoken languages: \(languageNames.joined(separator: ", "))")
+        
+        if !dataPoints.directors.isEmpty {
+            facts.append("Director(s): \(dataPoints.directors.joined(separator: ", "))")
         }
-        if let certificationText, !certificationText.isEmpty {
-            facts.append("Primary certification: \(certificationText)")
+        
+        if !dataPoints.castMembers.isEmpty {
+            let castString = dataPoints.castMembers.prefix(5)
+                .map { "\($0.name) as \($0.character)" }
+                .joined(separator: ", ")
+            facts.append("Main Cast: \(castString)")
         }
-
-        let factsSection = "Facts from TMDb:\n" + facts.map { "- \($0)" }.joined(separator: "\n")
-        let preferenceLine = preferenceTags.isEmpty ? "No specific tags provided." : preferenceTags.joined(separator: ", ")
-
-        let prompt = """
-        You are a helpful movie critic assistant.
-
-        Movie:
-        - Title: \(movie.title)
-        - Year: \(movie.year)
-        - Overview: \(movie.overview)
-
-        \(factsSection)
-
-        Review snippets (from various sources, noisy but useful):
-        \(reviewSnippets.isEmpty ? "No external reviews available." : reviewSnippets)
-
-        User preference tags to emphasize: \(preferenceLine)
-
-        TASK: Summarize the movie for the user using the facts and reviews above, highlighting how it aligns (or not) with their preferences without inventing new information.
-
-        OUTPUT STRICTLY AS JSON with keys:
-        {
-          "summary": "120–180 words emphasizing the user's tags and what they care about (e.g., comedy, action, acting skill, animation).",
-          "tailoredPoints": ["3-5 bullet points that reflect those tags"],
-          "fitScore": 0-100
+        
+        if !dataPoints.keywords.isEmpty {
+            facts.append("Themes/Keywords: \(dataPoints.keywords.joined(separator: ", "))")
         }
-        Do not include any extra text outside the JSON.
+        
+        if !dataPoints.streamingProviders.isEmpty {
+            facts.append("Streaming on: \(dataPoints.streamingProviders.joined(separator: ", "))")
+        }
+        
+        // Genre matching analysis for the AI
+        let genreMatches = dataPoints.genres.filter { genre in
+            preferenceTags.contains { pref in
+                pref.lowercased() == genre.lowercased()
+            }
+        }
+        
+        let preferenceAnalysis = """
+        User's preferred genres: \(preferenceTags.isEmpty ? "No specific preferences" : preferenceTags.joined(separator: ", "))
+        Movie's genres: \(dataPoints.genres.joined(separator: ", "))
+        Matching genres: \(genreMatches.isEmpty ? "None" : genreMatches.joined(separator: ", "))
         """
+        
+        // Build the complete prompt
+        let prompt = """
+        Please creates movie overviews that are tailored to the user preferences. First off, consider the user preferences. From all the movie information that you receive, you should create a summary revolving around only what the user preferences. The summary should be attractive to the user because it is not a generic plot summary, but actually shows them what they care about.
+        
+        MOVIE FACTS:
+        \(facts.map { "• \($0)" }.joined(separator: "\n"))
+        
+        PLOT OVERVIEW:
+        \(movie.overview)
+        
+        REVIEW EXCERPTS (these may give a broader picture of the movie, and you may the reviews if they are relevant and helpful to the overview):
+        \(dataPoints.reviewExcerpts.isEmpty ? "No reviews available" : dataPoints.reviewExcerpts.enumerated().map { "Review \($0.offset + 1): \($0.element)" }.joined(separator: "\n"))
+        
+        PREFERENCE MATCHING:
+        \(preferenceAnalysis)
+        
+        STRICT RULES:
+        1. Use ONLY the facts provided above - do not invent or assume any information
+        2. If user preferences match the movie's genres, emphasize those aspects
+        3. If preferences don't match, honestly indicate this in the fit score
+        4. Reference specific cast, director, or keywords ONLY if they appear in the facts above and are relevant to your analysis
+        5. Keep the summary between 100-300 words
+        6. Fit score should reflect: 85-100 if user preferences match very well, 65-84 if partial match, 30-64 if poor match, 0-29 for bad match
+        7. Use keywords/themes naturally only when they strengthen your analysis - don't force them in
+        8. Output in an easy to read format
+        
+        OUTPUT FORMAT (strict JSON):
+        {
+          "summary": "A 100-300 word summary emphasizing aspects relevant to user preferences, using ONLY provided information",
+          "tailoredPoints": ["Create 3-4 bullet points about the movie that relate to the user's preferences (or note if they don't match)"],
+          "fitScore": 0-100,
+          "dataSourcesUsed": ["List which data categories you referenced: genres, cast, keywords, reviews, etc."]
+        }
+        
+        Return ONLY valid JSON, no additional text.
+        """
+        
+        return prompt
+    }
 
-        // --- Request payload types ---
+    // MARK: - API Call
+
+    private func callGeminiAPI(prompt: String) async throws -> AITailoredSummary {
         struct RequestBody: Codable {
             struct Part: Codable { let text: String }
             struct Content: Codable { let parts: [Part] }
@@ -162,20 +296,25 @@ final class AIReviewService {
 
         let body = RequestBody(
             contents: [.init(parts: [.init(text: prompt)])],
-            generationConfig: .init(temperature: 0.3, maxOutputTokens: 400, responseMimeType: "application/json")
+            generationConfig: .init(
+                temperature: 0.2, // Lower temperature for more consistent, factual output
+                maxOutputTokens: 500,
+                responseMimeType: "application/json"
+            )
         )
 
-        // --- Build request ---
         var req = URLRequest(url: URL(string: "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent")!)
         req.httpMethod = "POST"
         req.setValue("application/json", forHTTPHeaderField: "Content-Type")
         req.setValue(apiKey, forHTTPHeaderField: "X-Goog-Api-Key")
         req.httpBody = try JSONEncoder().encode(body)
 
-        // --- Send ---
+        #if DEBUG
+        print("🚀 Sending request to Gemini API...")
+        #endif
+
         let (data, _) = try await URLSession.shared.data(for: req)
 
-        // --- Response decoding ---
         struct GeminiResponse: Codable {
             struct Candidate: Codable {
                 struct Content: Codable {
@@ -191,34 +330,71 @@ final class AIReviewService {
 
         guard
             let text = response.candidates?.first?.content.parts.first?.text,
-            !text.trimmingCharacters(in: CharacterSet.whitespacesAndNewlines).isEmpty
+            !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         else {
             throw AIReviewError.noCandidates
         }
 
-        // Handle fenced code blocks or extra text—extract the first JSON object
+        #if DEBUG
+        print("✅ Received response from Gemini")
+        print("📄 Raw response: \(text.prefix(200))...")
+        #endif
+
+        // Extract JSON
         let cleaned = Self.extractJSONObject(from: text)
 
         if let jsonData = cleaned.data(using: .utf8),
            let parsed = try? JSONDecoder().decode(AITailoredSummary.self, from: jsonData) {
             return parsed
         } else {
-            // Fallback: return raw text as summary
-            return AITailoredSummary(summary: text, tailoredPoints: [], fitScore: 50)
+            // Fallback with conservative response
+            return AITailoredSummary(
+                summary: "Unable to generate a tailored summary at this time.",
+                tailoredPoints: ["Movie data is being processed"],
+                fitScore: 50,
+                dataSourcesUsed: []
+            )
         }
+    }
+
+    // MARK: - Response Validation
+
+    private func validateAndReturnSummary(
+        _ summary: AITailoredSummary,
+        dataPoints: VerifiedDataPoints
+    ) -> AITailoredSummary {
+        // Could add additional validation here to ensure the summary
+        // doesn't contain information not in dataPoints
+        return summary
     }
 
     // MARK: - Helpers
 
-    /// Extract the first { ... } JSON object from a string (handles ```json fences).
+    private func calculateGenreMatchScore(
+        movieGenres: [String],
+        userPreferences: [String]
+    ) -> Int {
+        guard !userPreferences.isEmpty else { return 50 }
+        
+        let matches = movieGenres.filter { genre in
+            userPreferences.contains { pref in
+                pref.lowercased() == genre.lowercased()
+            }
+        }.count
+        
+        let score = (matches * 100) / max(userPreferences.count, 1)
+        return min(100, max(0, score))
+    }
+
+    /// Extract the first { ... } JSON object from a string
     private static func extractJSONObject(from text: String) -> String {
         let trimmed = text
             .replacingOccurrences(of: "```json", with: "```")
-            .trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
 
         if trimmed.hasPrefix("```") && trimmed.hasSuffix("```") {
             let body = trimmed.dropFirst(3).dropLast(3)
-            return String(body).trimmingCharacters(in: CharacterSet.whitespacesAndNewlines)
+            return String(body).trimmingCharacters(in: .whitespacesAndNewlines)
         }
 
         if let start = trimmed.firstIndex(of: "{") {

@@ -3,7 +3,7 @@
 //  Cinna
 //
 //  Updated to generate AI-tailored summaries using user preferences.
-//  Make sure AIReviewService.swift and TMDbService+Reviews.swift are added.
+//  Enhanced with comprehensive debug logging.
 //
 
 import SwiftUI
@@ -103,7 +103,7 @@ struct MovieDetailView: View {
         .task { await loadTailoredSummary() }
     }
 
-    // MARK: - AI Integration
+    // MARK: - AI Integration with Enhanced Debug Logging
 
     private func loadTailoredSummary() async {
         isSummarizing = true
@@ -121,6 +121,79 @@ struct MovieDetailView: View {
             // 2) Turn the user's preferences into human-readable tags
             let preferenceTags = moviePreferences.sortedSelectedGenresArray.map(\.title)
 
+            // DEBUG: Log the raw API responses
+            #if DEBUG
+            print("\n🎬 ========== TMDb API Debug Output ==========")
+            print("📽️ Movie: \(movie.title) (ID: \(movie.id))")
+            
+            print("\n📝 Reviews Response:")
+            print("  - Total reviews fetched: \(reviews.count)")
+            for (index, review) in reviews.prefix(3).enumerated() {
+                print("  - Review \(index + 1):")
+                print("    Author: \(review.author)")
+                print("    Content preview: \(String(review.content.prefix(200)))...")
+                print("    Created: \(review.createdAt ?? "Unknown")")
+            }
+            
+            print("\n🎭 Movie Details Response:")
+            print("  - Runtime: \(details.runtime ?? 0) minutes")
+            print("  - Tagline: \(details.tagline ?? "None")")
+            print("  - Genres: \(details.genres.map(\.name).joined(separator: ", "))")
+            print("  - Vote Average: \(details.voteAverage) from \(details.voteCount) votes")
+            
+            if let credits = details.credits {
+                print("\n  🎬 Credits:")
+                print("    - Cast count: \(credits.cast?.count ?? 0)")
+                let topCast = (credits.cast ?? []).prefix(5).map { member in
+                    "\(member.name) as \(member.character ?? "Unknown")"
+                }.joined(separator: ", ")
+                print("    - Top cast: \(topCast)")
+                
+                if let directors = credits.crew?.filter({ $0.job == "Director" }) {
+                    print("    - Directors: \(directors.map(\.name).joined(separator: ", "))")
+                }
+            }
+            
+            if let keywords = details.keywords?.keywords {
+                print("\n  🏷️ Keywords (\(keywords.count) total):")
+                let keywordNames = keywords.prefix(10).map(\.name).joined(separator: ", ")
+                print("    \(keywordNames)")
+            }
+            
+            print("\n  🌍 Production Info:")
+            print("    - Countries: \(details.productionCountries.map(\.name).joined(separator: ", "))")
+            print("    - Languages: \(details.spokenLanguages.map(\.englishName).joined(separator: ", "))")
+            
+            if let releaseDates = details.releaseDates?.results {
+                if let usRelease = releaseDates.first(where: { $0.iso3166_1 == "US" }) {
+                    if let cert = usRelease.releaseDates.first?.certification {
+                        print("    - US Certification: \(cert)")
+                    }
+                }
+            }
+            
+            if let providers = details.watchProviders?.results?["US"] {
+                print("\n  📺 Watch Providers (US):")
+                if let flatrate = providers.flatrate {
+                    print("    - Streaming on: \(flatrate.map(\.providerName).joined(separator: ", "))")
+                }
+                if let rent = providers.rent {
+                    print("    - Rent from: \(rent.map(\.providerName).joined(separator: ", "))")
+                }
+                if let buy = providers.buy {
+                    print("    - Buy from: \(buy.map(\.providerName).joined(separator: ", "))")
+                }
+            }
+            
+            print("\n🎯 User Preferences:")
+            print("  - Selected genres: \(preferenceTags.joined(separator: ", "))")
+            print("  - Matching genres: \(details.genres.map(\.name).filter { genreName in preferenceTags.contains { $0.lowercased() == genreName.lowercased() } }.joined(separator: ", "))")
+            
+            print("========================================\n")
+            #endif
+
+            // 3) Ask the AI to tailor
+
             // 3) Ask the AI to tailor
             aiSummary = try await AIReviewService.shared.generateTailoredReview(
                 movie: movie,
@@ -128,12 +201,27 @@ struct MovieDetailView: View {
                 reviews: reviews,
                 preferenceTags: preferenceTags
             )
+            
+            #if DEBUG
+            if let summary = aiSummary {
+                print("\n✨ AI Generated Summary:")
+                print("  - Summary length: \(summary.summary.count) chars")
+                print("  - Summary: \(summary.summary)")
+                print("  - Tailored Points (\(summary.tailoredPoints.count)):")
+                for point in summary.tailoredPoints {
+                    print("    • \(point)")
+                }
+                print("  - Fit Score: \(summary.fitScore)/100")
+            }
+            #endif
         } catch {
             #if DEBUG
-            print("AI summary error:", error)
+            print("❌ AI summary error: \(error)")
+            print("  - Error type: \(type(of: error))")
+            print("  - Localized: \(error.localizedDescription)")
             #endif
             aiSummary = nil
-            aiError = "Couldn’t generate a tailored review right now."
+            aiError = "Couldn't generate a tailored review right now."
         }
     }
 }
@@ -144,13 +232,15 @@ private struct WrapHStack<Content: View>: View {
     @ViewBuilder var content: () -> Content
 
     var body: some View {
-        // Simple fallback layout that works fine without iOS 17+ FlowLayout APIs
-        FlexibleView(
-            availableWidth: UIScreen.main.bounds.width - 48, // matches .padding(24) on container
-            spacing: spacing,
-            alignment: .leading,
-            content: content
-        )
+        // Use GeometryReader to get available width from context instead of deprecated UIScreen.main
+        GeometryReader { geometry in
+            FlexibleView(
+                availableWidth: geometry.size.width,
+                spacing: spacing,
+                alignment: .leading,
+                content: content
+            )
+        }
     }
 }
 
