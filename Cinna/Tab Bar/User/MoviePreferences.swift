@@ -11,10 +11,6 @@ struct MoviePreferences: View {
     @EnvironmentObject private var moviePreferences: MoviePreferencesData
     
     var body: some View {
-        ZStack {
-            BackgroundView()
-                .ignoresSafeArea()
-            
             List {
             Section("Your Genres") {
                 if moviePreferences.sortedSelectedGenresArray.isEmpty {
@@ -44,12 +40,12 @@ struct MoviePreferences: View {
                     .tint(.accentColor)
                 }
             }
-            }
+        }
             .scrollContentBackground(.hidden)
             .listStyle(.insetGrouped)
-        }
-        .navigationTitle("Movie Preferences")
-        .navigationBarTitleDisplayMode(.inline)
+            .background(BackgroundView())
+            .navigationTitle("Movie Preferences")
+            .navigationBarTitleDisplayMode(.inline)
     }
 }
 

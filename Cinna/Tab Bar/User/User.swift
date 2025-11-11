@@ -11,7 +11,7 @@ struct User: View {
     @EnvironmentObject private var userInfo: UserInfoData
     @EnvironmentObject private var moviePreferences: MoviePreferencesData
     @State private var showNotifications = false
-
+    
     //Custom notifications - temporary
     private let notifications: [UserNotification] = [
         .init(
@@ -30,77 +30,77 @@ struct User: View {
             message: "Premium seating now available for your favorite theater."
         ),
     ]
-
+    
     var body: some View {
         NavigationStack {
-            ZStack {
-                BackgroundView()
-                    .ignoresSafeArea()
+            
+            //body shit
+            ScrollView {
                 
-                ZStack(alignment: .topTrailing) {
-
-                //body shit
-                ScrollView {
-
-                    (Text("My \(Text("Cinna").italic())"))
-                        .font(.title.bold())
+                (Text("My \(Text("Cinna").italic())"))
+                    .font(.title.bold())
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                
+                VStack(alignment: .center, spacing: 6) {
+                    Text("Member since October 2, 2025")
+                        .font(.headline)
                         .foregroundStyle(.white)
-                        .frame(maxWidth: .infinity, alignment: .center)
-
-                    VStack(alignment: .center, spacing: 6) {
-                        Text("Member since October 2, 2025")
-                            .font(.headline)
-                            .foregroundStyle(.white)
-                        Text(
-                            "Thank you for being an \(Text("OG").bold()) \(Text("Cinna").italic()) !"
-                        )
-                        .foregroundStyle(.white.opacity(0.8))
-                    }
-                    .padding(.top, 8)
-                    .padding(.bottom, 16)
-
-                    //list of menu items
-                    VStack(spacing: 12) {
-                        NavigationLink(destination: Profile()) {
-                            UserMenuItem(
-                                title: "Profile",
-                                systemImage: "person.crop.circle"
-                            )
-                        }
-
-                        NavigationLink(destination: MovieTickets()) {
-                            UserMenuItem(
-                                title: "Movie Tickets",
-                                systemImage: "ticket"
-                            )
-                        }
-
-                        NavigationLink(destination: MoviePreferences()) {
-                            UserMenuItem(
-                                title: "Movie Preferences",
-                                systemImage: "slider.horizontal.3"
-                            )
-                        }
-
-                        NavigationLink(destination: PrivacySecurity()) {
-                            UserMenuItem(
-                                title: "Privacy & Security",
-                                systemImage: "lock.shield"
-                            )
-                        }
-                    }  //end list of menu items
-
-                    Image("UserPicture")
-                        .resizable()
-                        .scaledToFit()
-                        .frame(maxWidth: 240)
-                        .frame(maxWidth: .infinity)
-                        .padding(.top, 32)
-
-                }  //end body
-                .padding(.horizontal, 20)
+                    Text(
+                        "Thank you for being an \(Text("OG").bold()) \(Text("Cinna").italic()) !"
+                    )
+                    .foregroundStyle(.white.opacity(0.8))
+                }
+                .padding(.top, 8)
+                .padding(.bottom, 16)
                 
-
+                //list of menu items
+                VStack(spacing: 12) {
+                    NavigationLink(destination: Profile()) {
+                        UserMenuItem(
+                            title: "Profile",
+                            systemImage: "person.crop.circle"
+                        )
+                    }
+                    
+                    NavigationLink(destination: MovieTickets()) {
+                        UserMenuItem(
+                            title: "Movie Tickets",
+                            systemImage: "ticket"
+                        )
+                    }
+                    
+                    NavigationLink(destination: MoviePreferences()) {
+                        UserMenuItem(
+                            title: "Movie Preferences",
+                            systemImage: "slider.horizontal.3"
+                        )
+                    }
+                    
+                    NavigationLink(destination: PrivacySecurity()) {
+                        UserMenuItem(
+                            title: "Privacy & Security",
+                            systemImage: "lock.shield"
+                        )
+                    }
+                }  //end list of menu items
+                
+                Image("UserPicture")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 240)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 32)
+                
+            }  //end body
+            .safeAreaPadding(.top)
+            .padding(.horizontal, 20)
+            .padding(.bottom, 32)
+            .scrollIndicators(.hidden)
+            .background(BackgroundView())
+            .overlay(alignment: .topTrailing) {
+                
+                
                 if showNotifications {
                     NotificationDropdown(notifications: notifications)
                         .transition(.move(edge: .top).combined(with: .opacity))
@@ -113,16 +113,6 @@ struct User: View {
             )
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-
-                //                ToolbarItem(placement: .topBarLeading) {
-                //                    (Text("My \(Text("Cinna").italic())"))
-                //                        .font(.headline)
-                //                        .lineLimit(1)
-                //                        .fixedSize()
-                //                        .allowsHitTesting(false)
-                //                        .accessibilityAddTraits(.isHeader)
-                //                } //appears to be impossible to make it all the way to the left
-
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         withAnimation(
@@ -138,22 +128,22 @@ struct User: View {
                         .accessibilityLabel("Notifications")
                     }
                 }
-                }
+                
             }
-
+            
         }
     }
 }
 
 private struct NotificationDropdown: View {
     let notifications: [UserNotification]
-
+    
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Notifications")
                 .font(.headline)
                 .foregroundStyle(.primary)
-
+            
             if notifications.isEmpty {
                 Text("You're all caught up!")
                     .foregroundStyle(.secondary)

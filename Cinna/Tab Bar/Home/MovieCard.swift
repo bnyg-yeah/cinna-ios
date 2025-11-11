@@ -32,8 +32,9 @@ struct MovieCard: View {
                 }
 
                 HStack(spacing: 12) {
-                    if let year = movie.year.nonEmpty {
-                        Label(year, systemImage: "calendar")
+                    let monthText = movie.formattedReleaseDate(.monthOnly)
+                    if !monthText.isEmpty && monthText != "N/A" {
+                        Label(monthText, systemImage: "calendar")
                             .font(.caption)
                             .foregroundStyle(.secondary)
                     }
@@ -52,7 +53,7 @@ struct MovieCard: View {
                 .stroke(Color(.quaternarySystemFill), lineWidth: 1)
         )
         .accessibilityElement(children: .combine)
-        .accessibilityLabel("\(movie.title), \(movie.year.nonEmpty ?? ""), rated \(String(format: "%.1f", movie.voteAverage))")
+        .accessibilityLabel("\(movie.title), \(movie.formattedReleaseDate(.monthOnly)), rated \(String(format: "%.1f", movie.voteAverage))")
     }
 
     @ViewBuilder

@@ -29,6 +29,33 @@ struct TMDbMovie: Decodable, Identifiable, Hashable {
         return String(releaseDate.prefix(4))
     }
     
+    // Format release date with different styles
+    func formattedReleaseDate(_ style: ReleaseDateStyle) -> String {
+        guard let releaseDate = releaseDate, !releaseDate.isEmpty else { return "N/A" }
+        
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        
+        guard let date = formatter.date(from: releaseDate) else { return "N/A" }
+        
+        formatter.dateFormat = style.formatString
+        return formatter.string(from: date)
+    }
+    
+    enum ReleaseDateStyle {
+        case monthOnly      // "Jan"
+        case monthYear      // "January 2024"
+        case fullDate       // "January 15, 2024"
+        
+        var formatString: String {
+            switch self {
+            case .monthOnly: return "MMM"
+            case .monthYear: return "MMMM yyyy" 
+            case .fullDate: return "MMMM d, yyyy"
+            }
+        }
+    }
+    
     var posterURL: String? {
         guard let posterPath else {
             return nil
