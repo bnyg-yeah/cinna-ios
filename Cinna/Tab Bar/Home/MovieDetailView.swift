@@ -91,16 +91,17 @@ struct MovieDetailView: View {
                 
                 // ===== AI Tailored Overview Section =====
                 Group {
-                    if isSummarizing {
-                        ProgressView("Tailoring overview…")
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Tailored overview")
                             .font(.headline)
                             .foregroundColor(.white)
-                    } else if let aiOutput = aiSummary {
+                        
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("Tailored for you")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                            VStack(alignment: .leading, spacing: 12) {
+                            if isSummarizing {
+                                ProgressView()
+                                    .tint(.white)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            } else if let aiOutput = aiSummary {
                                 Text(aiOutput.summary)
                                 
                                 if !aiOutput.tailoredPoints.isEmpty {
@@ -116,22 +117,15 @@ struct MovieDetailView: View {
                                 Text("Fit score: \(aiOutput.fitScore)/100")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
+                            } else if let err = aiError {
+                                Text(err)
+                                    .foregroundColor(.white.opacity(0.8))
                             }
-                            .padding(16)
-                            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
-                        }
-                    } else if let err = aiError {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Tailored overview")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                            Text(err)
-                                .foregroundColor(.white.opacity(0.8))
                         }
                         .padding(16)
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .glassEffect()
+                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
                     }
+                    
                 }
                 
                 if isLoadingImages {
@@ -160,6 +154,7 @@ struct MovieDetailView: View {
                                                         .aspectRatio(img.aspectRatio, contentMode: .fit)
                                                         .frame(height: 160)
                                                         .clipShape(RoundedRectangle(cornerRadius: 12))
+                                                        .glassEffect()
                                                 case .failure:
                                                     Color.white.opacity(0.1)
                                                         .frame(width: 240, height: 160)
@@ -222,9 +217,10 @@ struct MovieDetailView: View {
         .navigationTitle(Text("Selected Movie"))
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await loadTailoredSummary()
             await loadImages()
+            await loadTailoredSummary()
         }
+        
     }
     
     // MARK: - AI Integration
