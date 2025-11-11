@@ -245,13 +245,13 @@ final class AIOverviewService {
         2) At least 70% of sentences must develop the focus genres with concrete elements from the facts or reviews.
         3) Do not include runtime, numeric ratings, vote counts, certifications, or streaming platforms in the summary.
         4) Cast, director, or keywords are allowed only when they reinforce the focus genres.
-        5) Keep the summary between 100 and 300 words, and the summary should be easy to read and understand.
+        5) Keep the summary between 100 and 200 words, and the summary should be easy to read and follow along.
         6) Tailored points must each map explicitly to a focus genre element.
         7) Fit score must primarily reflect alignment with the focus genres.
 
         OUTPUT FORMAT (strict JSON):
         {
-          "summary": "100-300 words focused on the user's preferences",
+          "summary": "100-200 words focused on the user's preferences",
           "tailoredPoints": ["3-4 bullets, each tied to a user preference element"],
           "fitScore": 0-100,
           "dataSourcesUsed": ["genres", "cast", "keywords", "reviews"]

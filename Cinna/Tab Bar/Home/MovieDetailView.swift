@@ -17,6 +17,11 @@ struct MovieDetailView: View {
     @State private var isSummarizing = false
     @State private var movieDetails: TMDbMovieDetails?
     
+    @State private var backdrops: [TMDbService.TMDbImage] = []
+    @State private var logos: [TMDbService.TMDbImage] = []
+    @State private var isLoadingImages = false
+    @State private var imageError: String?
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
@@ -24,12 +29,12 @@ struct MovieDetailView: View {
                 Text(movie.title)
                     .font(.title.bold())
                     .foregroundColor(.white)
-
+                
                 if !movie.overview.isEmpty {
                     Text(movie.overview)
                         .foregroundColor(.white.opacity(0.8))
                 }
-
+                
                 // ===== Technical details (not part of AI summary) =====
                 if let d = movieDetails {
                     let runtimeText: String = {
@@ -38,7 +43,7 @@ struct MovieDetailView: View {
                         let m = r % 60
                         return h > 0 ? "\(h)h \(String(format: "%02d", m))m" : "\(m)m"
                     }()
-
+                    
                     let certificationText: String = {
                         guard let results = d.releaseDates?.results, !results.isEmpty else { return "N/A" }
                         let primary = results.first { $0.iso3166_1 == "US" } ?? results.first
@@ -48,11 +53,11 @@ struct MovieDetailView: View {
                         }?.certification
                         return (cert?.isEmpty == false) ? cert! : "N/A"
                     }()
-
+                    
                     let scoreText = String(format: "%.1f/10", d.voteAverage)
-
+                    
                     let dateText = movie.formattedReleaseDate(.monthYear)
-
+                    
                     HStack(spacing: 14) {
                         Text("Released \(dateText)")
                         Divider()
@@ -65,7 +70,7 @@ struct MovieDetailView: View {
                     .font(.subheadline)
                     .foregroundColor(.white.opacity(0.7))
                 }
-
+                
                 // ===== Preferences chips (visual only) =====
                 if !moviePreferences.sortedSelectedGenresArray.isEmpty {
                     VStack(alignment: .leading, spacing: 8) {
@@ -83,11 +88,12 @@ struct MovieDetailView: View {
                         }
                     }
                 }
-
+                
                 // ===== AI Tailored Overview Section =====
                 Group {
                     if isSummarizing {
                         ProgressView("Tailoring overview…")
+                            .font(.headline)
                             .foregroundColor(.white)
                     } else if let aiOutput = aiSummary {
                         VStack(alignment: .leading, spacing: 12) {
@@ -96,7 +102,7 @@ struct MovieDetailView: View {
                                 .foregroundColor(.white)
                             VStack(alignment: .leading, spacing: 12) {
                                 Text(aiOutput.summary)
-
+                                
                                 if !aiOutput.tailoredPoints.isEmpty {
                                     VStack(alignment: .leading, spacing: 6) {
                                         ForEach(aiOutput.tailoredPoints, id: \.self) { point in
@@ -106,7 +112,7 @@ struct MovieDetailView: View {
                                     .font(.subheadline)
                                     .foregroundStyle(.secondary)
                                 }
-
+                                
                                 Text("Fit score: \(aiOutput.fitScore)/100")
                                     .font(.caption)
                                     .foregroundStyle(.secondary)
@@ -127,6 +133,85 @@ struct MovieDetailView: View {
                         .glassEffect()
                     }
                 }
+                
+                if isLoadingImages {
+                    ProgressView("Loading images…")
+                        .foregroundColor(.white)
+                } else if let imageError {
+                    Text(imageError)
+                        .foregroundColor(.white.opacity(0.8))
+                } else {
+                    if !backdrops.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Backdrops")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(backdrops) { img in
+                                        if let url = TMDbService.imageURL(path: img.filePath, size: "w780") {
+                                            AsyncImage(url: url) { phase in
+                                                switch phase {
+                                                case .empty:
+                                                    ProgressView()
+                                                case .success(let image):
+                                                    image
+                                                        .resizable()
+                                                        .aspectRatio(img.aspectRatio, contentMode: .fit)
+                                                        .frame(height: 160)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                                case .failure:
+                                                    Color.white.opacity(0.1)
+                                                        .frame(width: 240, height: 160)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                                @unknown default:
+                                                    EmptyView()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
+                    
+                    if !logos.isEmpty {
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text("Logos")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: 12) {
+                                    ForEach(logos) { img in
+                                        if let url = TMDbService.imageURL(path: img.filePath, size: "w300") {
+                                            AsyncImage(url: url) { phase in
+                                                switch phase {
+                                                case .empty:
+                                                    ProgressView()
+                                                case .success(let image):
+                                                    image
+                                                        .resizable()
+                                                        .scaledToFit()
+                                                        .frame(height: 80)
+                                                        .padding(10)
+                                                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                                                case .failure:
+                                                    Color.white.opacity(0.1)
+                                                        .frame(width: 140, height: 80)
+                                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                                @unknown default:
+                                                    EmptyView()
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                    }
+                }
             }
             .padding(.top, 24)
             .padding(.horizontal, 24)
@@ -136,7 +221,10 @@ struct MovieDetailView: View {
         .background(BackgroundView())
         .navigationTitle(Text("Selected Movie"))
         .navigationBarTitleDisplayMode(.inline)
-        .task { await loadTailoredSummary() }
+        .task {
+            await loadTailoredSummary()
+            await loadImages()
+        }
     }
     
     // MARK: - AI Integration
@@ -156,16 +244,16 @@ struct MovieDetailView: View {
             let preferenceTags = moviePreferences.sortedSelectedGenresArray.map(\.title)
             
             //Call Gemini HERE
-            //            aiSummary = try await AIOverviewService.shared.generateTailoredOverview(
-            //                movie: movie,
-            //                details: details,
-            //                reviews: reviews,
-            //                preferenceTags: preferenceTags
-            //            )
+            aiSummary = try await AIOverviewService.shared.generateTailoredOverview(
+                movie: movie,
+                details: details,
+                reviews: reviews,
+                preferenceTags: preferenceTags
+            )
             
 #if DEBUG
             if let summary = aiSummary {
-                print("\n✨ AI Generated Summary:")
+                print("\nAI Generated Summary:")
                 print("  - Summary length: \(summary.summary.count) chars")
                 print("  - Summary: \(summary.summary)")
                 print("  - Tailored Points (\(summary.tailoredPoints.count)):")
@@ -183,73 +271,19 @@ struct MovieDetailView: View {
             aiError = "Couldn't generate a tailored overview right now."
         }
     }
-}
-
-// MARK: - Wrap Layouts (unchanged)
-private struct WrapHStack<Content: View>: View {
-    var spacing: CGFloat = 8
-    @ViewBuilder var content: () -> Content
     
-    var body: some View {
-        GeometryReader { geometry in
-            FlexibleView(
-                availableWidth: geometry.size.width,
-                spacing: spacing,
-                alignment: .leading,
-                content: content
-            )
+    private func loadImages() async {
+        isLoadingImages = true
+        imageError = nil
+        defer { isLoadingImages = false }
+        do {
+            let res = try await TMDbService.getImages(movieID: movie.id)
+            backdrops = res.backdrops
+            logos = res.logos
+        } catch {
+            imageError = "Couldn't load images right now."
+            backdrops = []
+            logos = []
         }
-    }
-}
-
-private struct FlexibleView<Content: View>: View {
-    let availableWidth: CGFloat
-    let spacing: CGFloat
-    let alignment: HorizontalAlignment
-    @ViewBuilder var content: () -> Content
-    
-    @State private var totalHeight: CGFloat = .zero
-    
-    var body: some View {
-        ZStack(alignment: Alignment(horizontal: alignment, vertical: .top)) {
-            _FlexibleContent(availableWidth: availableWidth, spacing: spacing, content: content)
-                .background(viewHeightReader($totalHeight))
-        }
-        .frame(height: totalHeight)
-    }
-    
-    private func viewHeightReader(_ binding: Binding<CGFloat>) -> some View {
-        GeometryReader { geometry -> Color in
-            DispatchQueue.main.async { binding.wrappedValue = geometry.size.height }
-            return .clear
-        }
-    }
-}
-
-private struct _FlexibleContent<Content: View>: View {
-    let availableWidth: CGFloat
-    let spacing: CGFloat
-    @ViewBuilder var content: () -> Content
-    
-    var body: some View {
-        var width: CGFloat = 0
-        var height: CGFloat = 0
-        
-        return GeometryReader { _ in
-            ZStack(alignment: .topLeading) {
-                content()
-                    .alignmentGuide(.leading) { d in
-                        if (abs(width - d.width) > availableWidth) {
-                            width = 0
-                            height -= d.height + spacing
-                        }
-                        let result = width
-                        width -= d.width + spacing
-                        return result
-                    }
-                    .alignmentGuide(.top) { _ in height }
-            }
-        }
-        .frame(height: 0)
     }
 }
