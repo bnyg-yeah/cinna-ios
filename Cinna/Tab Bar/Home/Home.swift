@@ -72,21 +72,31 @@ struct Home: View {
     private func loadMovies() async {
         isLoading = true
         errorMessage = nil
+
         do {
-            // Use your existing engine as-is
             let engine = MovieRecommendationEngine.shared
-            movies = try await engine.getPersonalizedRecommendations(
-                selectedGenres: moviePreferences.selectedGenres,
-                page: 1
-            )
+
+            if !moviePreferences.selectedGenres.isEmpty {
+                // Fetch GraphRAG recommendations
+                movies = try await engine.getGraphRAGRecommendations(
+                    selectedGenres: moviePreferences.selectedGenres
+                )
+                print("✅ Loaded \(movies.count) GraphRAG movies")
+            } else {
+                // Fallback to TMDb-based recommendations
+                movies = try await engine.getPersonalizedRecommendations(
+                    selectedGenres: moviePreferences.selectedGenres,
+                    page: 1
+                )
+            }
         } catch {
             errorMessage = "Failed to load movies. Please try again."
-            #if DEBUG
-            print("Error loading movies: \(error)")
-            #endif
+            print("❌ Error loading movies:", error)
         }
+
         isLoading = false
     }
+
 }
 
 // MARK: - Local simple states
