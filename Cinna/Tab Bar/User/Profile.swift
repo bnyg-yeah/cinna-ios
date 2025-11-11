@@ -19,7 +19,11 @@ struct Profile: View {
     
     var body: some View {
         NavigationStack {
-            Form {
+            ZStack {
+                BackgroundView()
+                    .ignoresSafeArea()
+                
+                Form {
                 // MARK: - Name
                 Section("*Cinna* Profile Details") {
                     HStack(spacing: 12) {
@@ -106,6 +110,8 @@ struct Profile: View {
                     }
                     
                 }
+                }
+                .scrollContentBackground(.hidden)
             }
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.inline)

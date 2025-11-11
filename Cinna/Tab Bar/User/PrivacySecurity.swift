@@ -13,13 +13,15 @@ struct PrivacySecurity: View {
             VStack(alignment: .leading, spacing: 16) {
                 Text("Privacy & Security")
                     .font(.largeTitle.bold())
+                    .foregroundColor(.white)
 
                 Text("Manage authentication, data controls, and notification permissions in this area.")
-                    .foregroundStyle(.secondary)
+                    .foregroundColor(.white.opacity(0.8))
             }
             .padding()
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .background(BackgroundView())
         .navigationTitle("Privacy & Security")
         .navigationBarTitleDisplayMode(.inline)
     }

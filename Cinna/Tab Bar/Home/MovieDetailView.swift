@@ -1,4 +1,3 @@
-//
 //  MovieDetailView.swift
 //  Cinna
 //
@@ -19,129 +18,140 @@ struct MovieDetailView: View {
     @State private var movieDetails: TMDbMovieDetails?
     
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                // ===== Header / artwork / metadata =====
-                Text(movie.title)
-                    .font(.title.bold())
-                
-                if !movie.overview.isEmpty {
-                    Text(movie.overview)
-                        .foregroundStyle(.secondary)
-                }
-                
-                // ===== Technical details (not part of AI summary) =====
-                if let d = movieDetails {
-                    let runtimeText: String = {
-                        guard let r = d.runtime, r > 0 else { return "N/A" }
-                        //Formats the minutes into hours and minutes
-                        let h = r / 60
-                        let m = r % 60
-                        return h > 0 ? "\(h)h \(String(format: "%02d", m))m" : "\(m)m"
-                    }()
-                    
-                    let certificationText: String = {
-                        guard let results = d.releaseDates?.results, !results.isEmpty else { return "N/A" }
-                        let primary = results.first { $0.iso3166_1 == "US" } ?? results.first
-                        let cert = primary?.releaseDates.first { c in
-                            guard let v = c.certification?.trimmingCharacters(in: .whitespacesAndNewlines) else { return false }
-                            return !v.isEmpty
-                        }?.certification
-                        return (cert?.isEmpty == false) ? cert! : "N/A"
-                    }()
-                    
-                    let scoreText = String(format: "%.1f/10", d.voteAverage)
-                    
-                    let dateText: String = {
-                        guard let releaseDate = movie.releaseDate, !releaseDate.isEmpty else { return "N/A" }
-                        
-                        let formatter = DateFormatter()
-                        formatter.dateFormat = "yyyy-MM-dd"
-                        
-                        guard let date = formatter.date(from: releaseDate) else { return "N/A" }
-                        
-                        formatter.dateFormat = "MMMM yyyy"
-                        return formatter.string(from: date)
-                    }()
-                    
-                    HStack(spacing: 14) {
-                        Text("Released \(dateText)")
-                        Divider()
-                        Text("Runtime \(runtimeText)")
-                        Divider()
-                        Text("Score \(scoreText)")
-                        Divider()
-                        Text("Rating \(certificationText)")
+        ZStack {
+            BackgroundView()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 24) {
+                    // ===== Header / artwork / metadata =====
+                    Text(movie.title)
+                        .font(.title.bold())
+                        .foregroundColor(.white)
+
+                    if !movie.overview.isEmpty {
+                        Text(movie.overview)
+                            .foregroundColor(.white.opacity(0.8))
                     }
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                }
-                
-                // ===== Preferences chips (visual only) =====
-                if !moviePreferences.sortedSelectedGenresArray.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Your preferences")
-                            .font(.headline)
-                        HStack {
-                            ForEach(moviePreferences.sortedSelectedGenresArray, id: \.self) { genre in
-                                Text(genre.title)
-                                    .font(.caption)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .glassEffect(in: Capsule())
+
+                    // ===== Technical details (not part of AI summary) =====
+                    if let d = movieDetails {
+                        let runtimeText: String = {
+                            guard let r = d.runtime, r > 0 else { return "N/A" }
+                            let h = r / 60
+                            let m = r % 60
+                            return h > 0 ? "\(h)h \(String(format: "%02d", m))m" : "\(m)m"
+                        }()
+
+                        let certificationText: String = {
+                            guard let results = d.releaseDates?.results, !results.isEmpty else { return "N/A" }
+                            let primary = results.first { $0.iso3166_1 == "US" } ?? results.first
+                            let cert = primary?.releaseDates.first { c in
+                                guard let v = c.certification?.trimmingCharacters(in: .whitespacesAndNewlines) else { return false }
+                                return !v.isEmpty
+                            }?.certification
+                            return (cert?.isEmpty == false) ? cert! : "N/A"
+                        }()
+
+                        let scoreText = String(format: "%.1f/10", d.voteAverage)
+
+                        let dateText: String = {
+                            guard let releaseDate = movie.releaseDate, !releaseDate.isEmpty else { return "N/A" }
+
+                            let formatter = DateFormatter()
+                            formatter.dateFormat = "yyyy-MM-dd"
+
+                            guard let date = formatter.date(from: releaseDate) else { return "N/A" }
+
+                            formatter.dateFormat = "MMMM yyyy"
+                            return formatter.string(from: date)
+                        }()
+
+                        HStack(spacing: 14) {
+                            Text("Released \(dateText)")
+                            Divider()
+                            Text("Runtime \(runtimeText)")
+                            Divider()
+                            Text("Score \(scoreText)")
+                            Divider()
+                            Text("Rating \(certificationText)")
+                        }
+                        .font(.subheadline)
+                        .foregroundColor(.white.opacity(0.7))
+                    }
+
+                    // ===== Preferences chips (visual only) =====
+                    if !moviePreferences.sortedSelectedGenresArray.isEmpty {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Your preferences")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                            HStack {
+                                ForEach(moviePreferences.sortedSelectedGenresArray, id: \.self) { genre in
+                                    Text(genre.title)
+                                        .font(.caption)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .glassEffect(in: Capsule())
+                                }
                             }
                         }
-                        
                     }
-                }
-                
-                // ===== AI Tailored Overview Section =====
-                Group {
-                    if isSummarizing {
-                        ProgressView("Tailoring overview…")
-                    } else if let aiOutput = aiSummary {
-                        VStack(alignment: .leading, spacing: 12){
-                            Text("Tailored for you")
-                                .font(.headline)
-                            VStack(alignment: .leading, spacing: 12) {
-                                Text(aiOutput.summary)
-                                
-                                if !aiOutput.tailoredPoints.isEmpty {
-                                    VStack(alignment: .leading, spacing: 6) {
-                                        ForEach(aiOutput.tailoredPoints, id: \.self) { point in
-                                            Text("• \(point)")
+
+                    // ===== AI Tailored Overview Section =====
+                    Group {
+                        if isSummarizing {
+                            ProgressView("Tailoring overview…")
+                                .foregroundColor(.white)
+                        } else if let aiOutput = aiSummary {
+                            VStack(alignment: .leading, spacing: 12){
+                                Text("Tailored for you")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                VStack(alignment: .leading, spacing: 12) {
+                                    Text(aiOutput.summary)
+
+                                    if !aiOutput.tailoredPoints.isEmpty {
+                                        VStack(alignment: .leading, spacing: 6) {
+                                            ForEach(aiOutput.tailoredPoints, id: \.self) { point in
+                                                Text("• \(point)")
+                                            }
                                         }
+                                        .font(.subheadline)
+                                        .foregroundStyle(.secondary)
                                     }
-                                    .font(.subheadline)
-                                    .foregroundStyle(.secondary)
+
+                                    Text("Fit score: \(aiOutput.fitScore)/100")
+                                        .font(.caption)
+                                        .foregroundStyle(.secondary)
                                 }
-                                
-                                Text("Fit score: \(aiOutput.fitScore)/100")
-                                    .font(.caption)
-                                    .foregroundStyle(.secondary)
+                                .padding(16)
+                                .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
+                            }
+                        } else if let err = aiError {
+                            VStack(alignment: .leading, spacing: 8) {
+                                Text("Tailored overview")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+                                Text(err)
+                                    .foregroundColor(.white.opacity(0.8))
                             }
                             .padding(16)
-                            .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
+                            .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                            .glassEffect()
                         }
-                    }else if let err = aiError {
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("Tailored overview")
-                                .font(.headline)
-                            Text(err).foregroundStyle(.secondary)
-                        }
-                        .padding(16)
-                        .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-                        .glassEffect()
-                        
                     }
                 }
+                .padding(.horizontal, 24)
+                .padding(.bottom, 24)
             }
-            .padding(24)
+            .contentMargins(.top, 16)
+            .scrollIndicators(.hidden)
         }
         .navigationTitle(Text("Selected Movie"))
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadTailoredSummary() }
     }
+
     
     // MARK: - AI Integration
     private func loadTailoredSummary() async {
@@ -159,12 +169,13 @@ struct MovieDetailView: View {
             
             let preferenceTags = moviePreferences.sortedSelectedGenresArray.map(\.title)
             
-            aiSummary = try await AIOverviewService.shared.generateTailoredOverview(
-                movie: movie,
-                details: details,
-                reviews: reviews,
-                preferenceTags: preferenceTags
-            )
+            //Call Gemini HERE
+//            aiSummary = try await AIOverviewService.shared.generateTailoredOverview(
+//                movie: movie,
+//                details: details,
+//                reviews: reviews,
+//                preferenceTags: preferenceTags
+//            )
             
 #if DEBUG
             if let summary = aiSummary {

@@ -56,6 +56,7 @@ struct Home: View {
                     }
                 }
             }
+            .background(BackgroundView())
             .navigationDestination(for: TMDbMovie.self) { movie in
                 MovieDetailView(movie: movie)
             }

@@ -33,7 +33,11 @@ struct User: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .topTrailing) {
+            ZStack {
+                BackgroundView()
+                    .ignoresSafeArea()
+                
+                ZStack(alignment: .topTrailing) {
 
                 //body shit
                 ScrollView {
@@ -133,6 +137,7 @@ struct User: View {
                         .font(.title3.weight(.semibold))
                         .accessibilityLabel("Notifications")
                     }
+                }
                 }
             }
 
