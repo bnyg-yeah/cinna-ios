@@ -11,7 +11,7 @@ struct MoviePreferences: View {
     @EnvironmentObject private var moviePreferences: MoviePreferencesData
     
     var body: some View {
-            List {
+        List {
             Section("Your Genres") {
                 if moviePreferences.sortedSelectedGenresArray.isEmpty {
                     Text("You haven't picked any genres yet.")
@@ -24,28 +24,66 @@ struct MoviePreferences: View {
             }
             
             Section("Choose Your Favorites") {
-                ForEach(Genre.allCases) { genre in
+                ForEach(GenrePreferences.allCases) { genrePreference in
                     Toggle(isOn: Binding(
-                        get: { moviePreferences.selectedGenres.contains(genre) },
+                        get: { moviePreferences.selectedGenres.contains(genrePreference) },
                         set: { isOn in
                             if isOn {
-                                moviePreferences.selectedGenres.insert(genre)
+                                moviePreferences.selectedGenres.insert(genrePreference)
                             } else {
-                                moviePreferences.selectedGenres.remove(genre)
+                                moviePreferences.selectedGenres.remove(genrePreference)
                             }
                         }
                     )) {
-                        Label(genre.title, systemImage: genre.symbol)
+                        Label(genrePreference.title, systemImage: genrePreference.symbol)
+                    }
+                    .tint(.accentColor)
+                }
+                
+                ForEach(FilmmakingPreferences.allCases) { filmmakingPreference in
+                    Toggle(isOn: Binding(
+                        get: {
+                            moviePreferences.selectedFilmmakingPreferences.contains(filmmakingPreference)
+                        },
+                        set: { isOn in
+                            if isOn {
+                                moviePreferences.selectedFilmmakingPreferences.insert(filmmakingPreference)
+                            }
+                            else {
+                                moviePreferences.selectedFilmmakingPreferences.remove(filmmakingPreference)
+                            }
+                        }
+                    ))
+                    {
+                        Label(filmmakingPreference.title, systemImage:filmmakingPreference.symbol)
+                    }
+                    .tint(.accentColor)
+                }
+                
+                ForEach(AnimationPreferences.allCases) { animationPreference in
+                    Toggle(isOn: Binding(
+                        get: {
+                            moviePreferences.selectedAnimationPreferences.contains(animationPreference)
+                        },
+                        set: { isOn in
+                            if isOn {
+                                moviePreferences.selectedAnimationPreferences.insert(animationPreference)
+                            } else {
+                                moviePreferences.selectedAnimationPreferences.remove(animationPreference)
+                            }
+                        }
+                    )) {
+                        Label(animationPreference.title, systemImage: animationPreference.symbol)
                     }
                     .tint(.accentColor)
                 }
             }
         }
-            .scrollContentBackground(.hidden)
-            .listStyle(.insetGrouped)
-            .background(BackgroundView())
-            .navigationTitle("Movie Preferences")
-            .navigationBarTitleDisplayMode(.inline)
+        .scrollContentBackground(.hidden)
+        .listStyle(.insetGrouped)
+        .background(BackgroundView())
+        .navigationTitle("Movie Preferences")
+        .navigationBarTitleDisplayMode(.inline)
     }
 }
 

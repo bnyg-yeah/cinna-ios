@@ -16,6 +16,7 @@ struct MovieCard: View {
             poster
                 .frame(width: 72, height: 108)
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 8) {
@@ -45,13 +46,13 @@ struct MovieCard: View {
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
+            //Important liquid glass usage here. We need the fill of the RoundedRectangle itself to be clear, so that it's default background does not clash with the glassEffect
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(.secondarySystemBackground))
+                .fill(Color.clear)
+                .glassEffect(.regular,
+                             in: RoundedRectangle(cornerRadius:24, style: .continuous))
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color(.quaternarySystemFill), lineWidth: 1)
-        )
+        
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(movie.title), \(movie.formattedReleaseDate(.monthOnly)), rated \(String(format: "%.1f", movie.voteAverage))")
     }

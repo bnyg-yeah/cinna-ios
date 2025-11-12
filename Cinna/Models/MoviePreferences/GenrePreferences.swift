@@ -1,5 +1,5 @@
 //
-//  Genres.swift
+//  GenrePreferences.swift
 //  Cinna
 //
 //  Created by Brighton Young on 10/10/25.
@@ -7,7 +7,7 @@
 
 import Foundation
 
-enum Genre: String, CaseIterable, Identifiable {
+enum GenrePreferences: String, CaseIterable, Identifiable {
     case action
     case comedy
     case drama

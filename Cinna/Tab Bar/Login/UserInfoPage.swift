@@ -75,7 +75,7 @@ struct UserInfoView: View {
 
                     // MARK: Genres
                     Section("What do you like to watch?") {
-                        ForEach(Genre.allCases, id: \.self) { genre in
+                        ForEach(GenrePreferences.allCases, id: \.self) { genre in
                             Button {
                                 moviePreferences.toggleGenre(genre)
                             } label: {

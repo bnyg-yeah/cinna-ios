@@ -16,7 +16,7 @@ class MovieRecommendationEngine {
     
     /// Get personalized movie recommendations based on user's genre preferences
     func getPersonalizedRecommendations(
-        selectedGenres: Set<Genre>,
+        selectedGenres: Set<GenrePreferences>,
         page: Int = 1
     ) async throws -> [TMDbMovie] {
         // If user hasn't selected any genres, return popular movies

@@ -77,14 +77,36 @@ struct MovieDetailView: View {
                         Text("Your preferences")
                             .font(.headline)
                             .foregroundColor(.white)
-                        HStack {
-                            ForEach(moviePreferences.sortedSelectedGenresArray, id: \.self) { genre in
-                                Text(genre.title)
-                                    .font(.caption)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
-                                    .glassEffect(in: Capsule())
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack {
+                                ForEach(moviePreferences.sortedSelectedGenresArray, id: \.self) { genre in
+                                    Text(genre.title)
+                                        .font(.caption)
+                                        .padding(.horizontal, 10)
+                                        .padding(.vertical, 6)
+                                        .glassEffect(.regular.interactive(), in: Capsule())
+                                }
+                                if !moviePreferences.sortedSelectedFilmmakingArray.isEmpty{
+                                    ForEach(moviePreferences.sortedSelectedFilmmakingArray, id: \.self) { filmmaking in
+                                        Text(filmmaking.title)
+                                            .font(.caption)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 6)
+                                            .glassEffect(.regular.interactive(), in: Capsule())
+                                    }
+                                }
+                                if !moviePreferences.sortedSelectedAnimationArray.isEmpty{
+                                    ForEach(moviePreferences.sortedSelectedAnimationArray, id: \.self) { animation in
+                                        Text(animation.title)
+                                            .font(.caption)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 6)
+                                            .glassEffect(.regular.interactive(), in: Capsule())
+                                    }
+                                }
+                                
                             }
+//                            .padding(.vertical, 4)
                         }
                     }
                 }
@@ -123,7 +145,11 @@ struct MovieDetailView: View {
                             }
                         }
                         .padding(16)
-                        .glassEffect(.regular.interactive(), in: .rect(cornerRadius: 16))
+                        .background(RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(Color.clear)                                   // make fill transparent so it doesn’t add its own color
+                            .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        )
+                        
                     }
                     
                 }
@@ -153,12 +179,13 @@ struct MovieDetailView: View {
                                                         .resizable()
                                                         .aspectRatio(img.aspectRatio, contentMode: .fit)
                                                         .frame(height: 160)
-                                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                                        .glassEffect()
+                                                        .clipShape(RoundedRectangle(cornerRadius: 12)) //continuous is default
+                                                        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 12))
                                                 case .failure:
                                                     Color.white.opacity(0.1)
                                                         .frame(width: 240, height: 160)
                                                         .clipShape(RoundedRectangle(cornerRadius: 12))
+                                                        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 12))
                                                 @unknown default:
                                                     EmptyView()
                                                 }
@@ -190,11 +217,17 @@ struct MovieDetailView: View {
                                                         .scaledToFit()
                                                         .frame(height: 80)
                                                         .padding(10)
-                                                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 12))
+                                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                                        .glassEffect(.clear.interactive(),
+                                                                     in: RoundedRectangle(cornerRadius:12, style: .continuous))
+                                                    
+                                                    
                                                 case .failure:
                                                     Color.white.opacity(0.1)
                                                         .frame(width: 140, height: 80)
                                                         .clipShape(RoundedRectangle(cornerRadius: 12))
+                                                        .glassEffect(.clear.interactive(),
+                                                                     in: RoundedRectangle(cornerRadius:12, style: .continuous))
                                                 @unknown default:
                                                     EmptyView()
                                                 }
