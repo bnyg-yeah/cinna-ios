@@ -5,61 +5,68 @@
 //  Created by Brighton Young on 11/4/25.
 //
 
-
-//
-//  TheaterCard.swift
-//  Cinna
-//
-//  Created by Subhan Shrestha on 10/9/25.
-//
-
 import SwiftUI
+import MapKit
+import CoreLocation
 
 struct TheaterCard: View {
     let theater: Theater
 
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
-            // ⭐️ Rating (only if available)
-            if let rating = theater.rating {
-                VStack(alignment: .center, spacing: 6) {
-                    Image(systemName: "star.fill")
-                        .foregroundStyle(.yellow)
-                        .font(.system(size: 22))
-                    Text(String(format: "%.1f", rating))
-                        .foregroundStyle(.yellow)
-                        .font(.headline)
-                }
-                .accessibilityElement(children: .combine)
-                .accessibilityLabel("Rating \(String(format: "%.1f", rating)) out of 5")
+            // Leading visual: small map snapshot placeholder to mirror Movie poster
+            ZStack {
+                LinearGradient(
+                    colors: [Color(.systemOrange), Color(.systemPink)],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                Image(systemName: "popcorn.fill")
+                    .font(.system(size: 28))
+                    .foregroundStyle(.white)
             }
+            .frame(width: 72, height: 72)
+            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .accessibilityHidden(true)
 
-            // 🎭 Theater Info
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 8) {
                 Text(theater.name)
                     .font(.headline)
                     .foregroundStyle(.primary)
-                    .lineLimit(2)
+                    .accessibilityAddTraits(.isHeader)
 
-                Text(theater.address ?? "Address not available")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
+                if let address = theater.address, !address.isEmpty {
+                    Text(address)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+
+                HStack(spacing: 12) {
+                    if let rating = theater.rating {
+                        RatingBadge(text: String(format: "⭐️ %.1f", rating))
+                    } else {
+                        Text("No rating")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Label("Directions", systemImage: "map")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
-
-            Spacer()
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .fill(Color(.secondarySystemBackground))   // was systemBackground
+                .fill(Color.clear)
+                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
         )
-        .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
-                .stroke(Color(.quaternarySystemFill), lineWidth: 1)
-        )
-//        .shadow(radius: 3, y: 2)
-        // NOTE: Horizontal padding removed here; Theaters.swift owns outer horizontal insets.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("\(theater.name), \(theater.address ?? "Address unavailable")\(theater.rating != nil ? ", rated \(String(format: "%.1f", theater.rating!))" : "")")
     }
 }
+

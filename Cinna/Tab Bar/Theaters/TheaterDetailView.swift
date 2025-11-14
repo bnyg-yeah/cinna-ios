@@ -26,70 +26,111 @@ struct TheaterDetailView: View {
     
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 24) {
+                // Title
+                Text(theater.name)
+                    .font(.title.bold())
+                    .foregroundColor(.white)
                 
-                // Map with a single pin at the theater
+                // Hero Map
                 Map(position: $cameraPosition) {
                     Marker(theater.name, coordinate: theater.location)
                         .tint(.yellow)
                 }
                 .frame(height: 240)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                 .overlay(
-                    RoundedRectangle(cornerRadius: 16)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
                         .stroke(Color.white.opacity(0.08), lineWidth: 1)
                 )
                 
-                // Title & rating
-                VStack(alignment: .leading, spacing: 8) {
-                    Text(theater.name)
-                        .font(.title2).bold()
-                        .foregroundColor(.primary)
-                    
-                    HStack(spacing: 8) {
-                        Image(systemName: "star.fill")
-                            .foregroundColor(.yellow)
-                        Text(theater.rating.map { String(format: "%.1f", $0) } ?? "—")
-                            .foregroundColor(.yellow)
-                        Text("rating")
-                            .foregroundColor(.secondary)
+                // Technical details / badges
+                HStack(spacing: 14) {
+                    if let rating = theater.rating {
+                        Text("Score \(String(format: "%.1f/5", rating))")
+                    } else {
+                        Text("Score N/A")
                     }
-                    .font(.headline)
+                    
+                    Divider()
+                    
+                    if let addr = theater.address, !addr.isEmpty {
+                        Text("Address available")
+                    } else {
+                        Text("Address N/A")
+                    }
                 }
+                .font(.subheadline)
+                .foregroundColor(.white.opacity(0.7))
                 
-                // Address
-                if let addr = theater.address {
-                    HStack(alignment: .top, spacing: 8) {
-                        Image(systemName: "mappin.and.ellipse")
-                            .foregroundColor(.secondary)
-                        Text(addr)
-                            .foregroundColor(.secondary)
+                // Address section (glass card)
+                if let addr = theater.address, !addr.isEmpty {
+                    VStack(alignment: .leading, spacing: 12) {
+                        Text("Location")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                        
+                        VStack(alignment: .leading, spacing: 8) {
+                            HStack(alignment: .top, spacing: 8) {
+                                Image(systemName: "mappin.and.ellipse")
+                                    .foregroundColor(.secondary)
+                                Text(addr)
+                                    .foregroundStyle(.primary)
+                            }
+                            
+                            Button {
+                                openInMaps()
+                            } label: {
+                                Label("Open in Maps", systemImage: "map")
+                                    .font(.subheadline.weight(.semibold))
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .tint(.accentColor)
+                        }
+                        .padding(16)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color.clear)
+                                .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        )
                     }
                 }
                 
                 // Placeholder for future showtimes/seat map/etc.
-                VStack(alignment: .leading, spacing: 6) {
+                VStack(alignment: .leading, spacing: 12) {
                     Text("Coming Soon")
                         .font(.headline)
-                    Text("Live showtimes, seat previews, and best-value tickets will appear here.")
-                        .foregroundColor(.secondary)
+                        .foregroundColor(.white)
+                    
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Live showtimes, seat previews, and best-value tickets will appear here.")
+                            .foregroundStyle(.secondary)
+                        Text("We’ll also surface membership perks and promos for this location.")
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(16)
+                    .background(
+                        RoundedRectangle(cornerRadius: 16, style: .continuous)
+                            .fill(Color.clear)
+                            .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    )
                 }
-                .padding()
-                .background(.ultraThinMaterial)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
             }
-            .padding()
+            .padding(.top, 24)
+            .padding(.horizontal, 24)
+            .padding(.bottom, 24)
         }
+        .scrollIndicators(.hidden)
+        .background(BackgroundView())
         .navigationTitle("Theater Info")
         .navigationBarTitleDisplayMode(.inline)
-        .background(
-            LinearGradient(
-                colors: [Color.black, Color.gray.opacity(0.25)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-            .ignoresSafeArea()
-        )
+    }
+    
+    private func openInMaps() {
+        let placemark = MKPlacemark(coordinate: theater.location)
+        let mapItem = MKMapItem(placemark: placemark)
+        mapItem.name = theater.name
+        mapItem.openInMaps()
     }
 }
 
@@ -102,3 +143,4 @@ struct TheaterDetailView: View {
         location: CLLocationCoordinate2D(latitude: 37.78455, longitude: -122.40334)
     ))
 }
+
