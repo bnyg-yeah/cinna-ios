@@ -3,7 +3,7 @@
 //  Cinna
 //
 //  Created by Chao Chen on 10/27/25.
-//  Updated with GraphRAG by Subhan on 11/29/25.
+//  Updated with GraphRAG by Team Cinna on 11/30/25.
 //
 
 import Foundation
@@ -57,16 +57,19 @@ class MovieRecommendationEngine {
     // MARK: - Fetch Movies for Graph
     
     /// Fetch multiple pages of movies to build a rich knowledge graph
-    private func fetchMoviesForGraph(genreIDs: [Int], pages: Int = 3) async throws -> [TMDbMovie] {
+    /// Fetches movies for EACH genre separately to get more results
+    private func fetchMoviesForGraph(genreIDs: [Int], pages: Int = 2) async throws -> [TMDbMovie] {
         var allMovies: [TMDbMovie] = []
         
-        // Fetch multiple pages for richer graph
-        for page in 1...pages {
-            let movies = try await TMDbService.discoverMovies(genreIDs: genreIDs, page: page)
-            allMovies.append(contentsOf: movies)
-            
-            // Small delay to respect rate limits
-            try? await Task.sleep(nanoseconds: 200_000_000)
+        // Fetch movies for EACH genre separately (OR logic, not AND)
+        for genreID in genreIDs {
+            for page in 1...pages {
+                let movies = try await TMDbService.discoverMovies(genreIDs: [genreID], page: page)
+                allMovies.append(contentsOf: movies)
+                
+                // Small delay to respect rate limits
+                try? await Task.sleep(nanoseconds: 200_000_000)
+            }
         }
         
         // Remove duplicates
