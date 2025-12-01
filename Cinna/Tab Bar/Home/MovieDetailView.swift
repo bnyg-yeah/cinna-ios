@@ -11,6 +11,7 @@ struct MovieDetailView: View {
     let movie: TMDbMovie
     
     @EnvironmentObject private var moviePreferences: MoviePreferencesData
+    @StateObject private var userRatings = UserRatings.shared
     
     @State private var aiSummary: AIMovieOverview?
     @State private var aiError: String?
@@ -21,6 +22,10 @@ struct MovieDetailView: View {
     @State private var logos: [TMDbService.TMDbImage] = []
     @State private var isLoadingImages = false
     @State private var imageError: String?
+    
+    private var currentUserRating: Int? {
+        userRatings.getRating(for: movie.id)
+    }
     
     var body: some View {
         ScrollView {
@@ -238,8 +243,52 @@ struct MovieDetailView: View {
                                 .padding(.vertical, 4)
                             }
                         }
+                    }//end logos
+                }//end loading images
+                
+                // ===== User Rating =====
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Rate this movie!")
+                        .font(.headline)
+                        .foregroundColor(.white)
+                    
+                    HStack(spacing: 8) {
+                        ForEach(1...4, id: \.self) { value in
+                            Button {
+                                UserRatings.shared.setRating(value, for: movie.id)
+                            } label: {
+                                Text("\(value)")
+                                    .font(.headline)
+                                    .frame(width: 44, height: 44)
+                                    .glassEffect(in: .circle)
+                                    .foregroundColor((currentUserRating == value) ? .white : .gray)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        
+                        Button {
+                            UserRatings.shared.clearRating(for: movie.id)
+                        } label: {
+                            Text("Clear")
+                                .font(.subheadline)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                        }
+                        .buttonStyle(.glass(.clear))
+
                     }
-                }
+                    
+                    if let current = currentUserRating {
+                        Text("Your rating: \(current)/4")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    } else {
+                        Text("Not rated yet")
+                            .font(.footnote)
+                            .foregroundStyle(.secondary)
+                    }
+                }//end rating
+                
             }
             .padding(.top, 24)
             .padding(.horizontal, 24)
@@ -316,3 +365,4 @@ struct MovieDetailView: View {
         }
     }
 }
+

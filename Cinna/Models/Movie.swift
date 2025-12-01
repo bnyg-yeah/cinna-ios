@@ -13,7 +13,7 @@ struct TMDbResponse: Decodable {
     let results: [TMDbMovie]
 }
 
-// MARK: - Basic movie used by lists
+// MARK: - Basic movie used by lists and MovieNode-graphrag
 
 struct TMDbMovie: Decodable, Identifiable, Hashable {
     let id: Int
@@ -22,6 +22,7 @@ struct TMDbMovie: Decodable, Identifiable, Hashable {
     let releaseDate: String?
     let posterPath: String?
     let voteAverage: Double
+    let genreIDs: [Int]?    // <-- add this line
 
     // Handy computed year for prompts/UI
     var year: String {
@@ -50,7 +51,7 @@ struct TMDbMovie: Decodable, Identifiable, Hashable {
         var formatString: String {
             switch self {
             case .monthOnly: return "MMM"
-            case .monthYear: return "MMMM yyyy" 
+            case .monthYear: return "MMMM yyyy"
             case .fullDate: return "MMMM d, yyyy"
             }
         }
@@ -68,8 +69,10 @@ struct TMDbMovie: Decodable, Identifiable, Hashable {
         case releaseDate = "release_date"
         case posterPath = "poster_path"
         case voteAverage = "vote_average"
+        case genreIDs = "genre_ids"   // <-- add this line
     }
 }
+
 
 // MARK: - Detailed movie payload (for /movie/{id}?append_to_response=...)
 
