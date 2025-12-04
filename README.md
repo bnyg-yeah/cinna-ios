@@ -1,6 +1,6 @@
 # Cinna
 
-Cinna is your cinematic co-pilot, blending AI-driven curation with a premium mobile experience so you can spend less time scrolling and more time watching stories you love.
+Cinna is your cinematic co-pilot, blending AI-driven curation and math graph-based recommendations with a premium mobile experience so you can spend less time scrolling and more time watching stories you love.
 
 ## ✨ Why you'll love Cinna
 - **Personalized from the start** – A playful onboarding quiz captures your preferred genres, go-to moods (think family-friendly or action-packed), and location so recommendations feel tailored from day one.
