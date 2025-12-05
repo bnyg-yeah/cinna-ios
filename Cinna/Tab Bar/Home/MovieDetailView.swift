@@ -23,6 +23,8 @@ struct MovieDetailView: View {
     @State private var logos: [TMDbService.TMDbImage] = []
     @State private var isLoadingImages = false
     @State private var imageError: String?
+    @State private var selectedBackdropIndex: Int?
+
     
     private var currentUserRating: Int? {
         userRatings.getRating(for: movie.id)
@@ -174,7 +176,9 @@ struct MovieDetailView: View {
                                 .foregroundColor(.white)
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
-                                    ForEach(backdrops) { img in
+                                    
+                                    ForEach(Array(backdrops.enumerated()), id: \.offset) { index, img in
+                                        
                                         if let url = TMDbService.imageURL(path: img.filePath, size: "w780") {
                                             AsyncImage(url: url) { phase in
                                                 switch phase {
@@ -185,12 +189,13 @@ struct MovieDetailView: View {
                                                         .resizable()
                                                         .aspectRatio(img.aspectRatio, contentMode: .fit)
                                                         .frame(height: 160)
-                                                        .clipShape(RoundedRectangle(cornerRadius: 12)) //continuous is default
                                                         .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 12))
+                                                        .onTapGesture {
+                                                            selectedBackdropIndex = index
+                                                        }
                                                 case .failure:
                                                     Color.white.opacity(0.1)
                                                         .frame(width: 240, height: 160)
-                                                        .clipShape(RoundedRectangle(cornerRadius: 12))
                                                         .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 12))
                                                 @unknown default:
                                                     EmptyView()
@@ -316,7 +321,8 @@ struct MovieDetailView: View {
             .padding(.top, 24)
             .padding(.horizontal, 24)
             .padding(.bottom, 24)
-        }
+            
+        }//end Scroll view
         .scrollIndicators(.hidden)
         .background(BackgroundView())
         .navigationTitle(Text("Selected Movie"))
@@ -325,6 +331,18 @@ struct MovieDetailView: View {
             await loadImages()
             await loadTailoredSummary()
         }
+        .sheet(isPresented: Binding(
+            get: { selectedBackdropIndex != nil },
+            set: { if !$0 { selectedBackdropIndex = nil } }
+        )) {
+            if let index = selectedBackdropIndex {
+                BackdropView(movieID: movie.id, index: index)
+                    .presentationDetents([.large])
+                    .presentationDragIndicator(.visible)
+            }
+        }
+
+
         
     }
     
