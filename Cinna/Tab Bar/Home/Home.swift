@@ -137,5 +137,6 @@ private struct EmptyStateView: View {
 
 #Preview {
     Home()
+        .environmentObject(UserInfoData())
         .environmentObject(MoviePreferencesData())
 }

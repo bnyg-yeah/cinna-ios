@@ -12,6 +12,7 @@ struct MovieDetailView: View {
     
     @EnvironmentObject private var moviePreferences: MoviePreferencesData
     @StateObject private var userRatings = UserRatings.shared
+    @EnvironmentObject private var userInfo: UserInfoData
     
     @State private var aiSummary: AIMovieOverview?
     @State private var aiError: String?
@@ -111,7 +112,7 @@ struct MovieDetailView: View {
                                 }
                                 
                             }
-//                            .padding(.vertical, 4)
+                            //                            .padding(.vertical, 4)
                         }
                     }
                 }
@@ -157,7 +158,7 @@ struct MovieDetailView: View {
                         
                     }
                     
-                }
+                }//end overview
                 
                 if isLoadingImages {
                     ProgressView("Loading images…")
@@ -275,7 +276,7 @@ struct MovieDetailView: View {
                                 .padding(.vertical, 8)
                         }
                         .buttonStyle(.glass(.clear))
-
+                        
                     }
                     
                     if let current = currentUserRating {
@@ -288,6 +289,28 @@ struct MovieDetailView: View {
                             .foregroundStyle(.secondary)
                     }
                 }//end rating
+                
+                // MARK: temporary User Photos display THIS WORKS
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Your photos")
+                    
+                    if userInfo.userPhotos.isEmpty {
+                        Text("No photos")
+                    }
+                    else {
+                        HStack(spacing:12) {
+                            ForEach(Array(userInfo.userPhotos.enumerated()), id: \.offset) {
+                                _, photo in
+                                Image(uiImage: photo)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(width: 140, height: 140)
+                            }
+                        }
+                        .padding(.vertical, 4)
+                    }
+                }//end temporary user photos display
+                
                 
             }
             .padding(.top, 24)
@@ -316,8 +339,11 @@ struct MovieDetailView: View {
             async let detailsTask = TMDbService.getMovieDetails(movieID: movie.id)
             
             let reviews = try await reviewsTask
+            MovieDataStore.shared.storeReviews(reviews, for: movie.id)
+
             let details = try await detailsTask
             self.movieDetails = details
+            MovieDataStore.shared.storeDetails(details, for: movie.id)
             
             let preferenceTags = moviePreferences.sortedSelectedGenresArray.map(\.title)
             
@@ -358,10 +384,29 @@ struct MovieDetailView: View {
             let res = try await TMDbService.getImages(movieID: movie.id)
             backdrops = res.backdrops
             logos = res.logos
+            
+            let storedBackdrops = convertStoredImage(res.backdrops)
+            let storedLogos = convertStoredImage(res.logos)
+            
+            MovieDataStore.shared.storeBackdrops(storedBackdrops, for: movie.id)
+            MovieDataStore.shared.storeLogos(storedLogos, for: movie.id)
+            
         } catch {
             imageError = "Couldn't load images right now."
             backdrops = []
             logos = []
+        }
+    }
+    
+    private func convertStoredImage(_ images: [TMDbService.TMDbImage]) -> [StoredImage] {
+        images.map {
+            StoredImage(
+                filePath: $0.filePath,
+                aspectRatio: $0.aspectRatio,
+                url_w300: TMDbService.imageURL(path: $0.filePath, size: "w300"),
+                url_w780: TMDbService.imageURL(path: $0.filePath, size: "w780"),
+                url_original: TMDbService.imageURL(path: $0.filePath, size: "original")
+            )
         }
     }
 }
