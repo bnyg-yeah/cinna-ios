@@ -13,6 +13,8 @@ import SafariServices
 
 struct TheaterDetailView: View {
     let theater: Theater
+
+    @ObservedObject private var favorites = FavoriteTheater.shared
     
     // Map camera centered on the theater
     @State private var cameraPosition: MapCameraPosition
@@ -43,6 +45,16 @@ struct TheaterDetailView: View {
                     Text(theater.name)
                         .font(.title.bold())
                         .foregroundColor(.white)
+                    Spacer()
+                    Button {
+                        favorites.toggleFavorite(id: theater.id)
+                    } label: {
+                        Image(systemName: favorites.isFavorite(id: theater.id) ? "star.fill" : "star")
+                            .foregroundStyle(favorites.isFavorite(id: theater.id) ? .yellow : .white.opacity(0.8))
+                            .font(.title3)
+                            .accessibilityLabel(favorites.isFavorite(id: theater.id) ? "Unfavorite" : "Mark as Favorite")
+                    }
+                    .buttonStyle(.plain)
                 }
                 
                 // Hero Map

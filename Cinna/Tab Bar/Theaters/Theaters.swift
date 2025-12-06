@@ -11,6 +11,7 @@ import SwiftUI
 struct Theaters: View {
     @EnvironmentObject private var userInfo: UserInfoData
     @StateObject private var viewModel = TheatersViewModel()
+    @ObservedObject private var favorites = FavoriteTheater.shared
 
     @State private var cityDisplay: String?
     @State private var isGeocoding = false
@@ -63,6 +64,13 @@ struct Theaters: View {
                                 }
 
                             case .loaded(let theaters):
+                                let favs = Set(favorites.favoriteIDs)
+                                let sorted = theaters.sorted { lhs, rhs in
+                                    let lFav = favs.contains(lhs.id)
+                                    let rFav = favs.contains(rhs.id)
+                                    if lFav != rFav { return lFav && !rFav }
+                                    return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+                                }
                                 if theaters.isEmpty {
                                     EmptyStateCard(
                                         title: "No theaters found nearby 😔",
@@ -70,7 +78,7 @@ struct Theaters: View {
                                     )
                                 } else {
                                     VStack(spacing: 16) {
-                                        ForEach(theaters, id: \.id) { theater in
+                                        ForEach(sorted, id: \.id) { theater in
                                             NavigationLink(
                                                 destination: TheaterDetailView(theater: theater)
                                             ) {
@@ -285,3 +293,4 @@ extension UserInfoData {
     }
 }
 #endif
+

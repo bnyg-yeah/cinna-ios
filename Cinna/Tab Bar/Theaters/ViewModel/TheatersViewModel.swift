@@ -1,4 +1,3 @@
-
 //
 //  TheatersViewModel.swift
 //  Cinna
@@ -37,6 +36,7 @@ final class TheatersViewModel: ObservableObject {
     }
 
     @Published var state: State = .idle
+    private let favorites = FavoriteTheater.shared
     private let placesService: PlacesService
 
     init(placesService: PlacesService? = nil) {
@@ -62,7 +62,15 @@ final class TheatersViewModel: ObservableObject {
             print("📍 Using coordinate: \(coordinate.latitude), \(coordinate.longitude)")
             let theaters = try await placesService.nearbyMovieTheaters(at: coordinate, radius: 15000)
             print("🎬 API returned \(theaters.count) theaters")
-            state = .loaded(theaters)
+            // Sort so favorite theater appears first
+            let favs = Set(favorites.favoriteIDs)
+            let sorted = theaters.sorted { lhs, rhs in
+                let lFav = favs.contains(lhs.id)
+                let rFav = favs.contains(rhs.id)
+                if lFav != rFav { return lFav && !rFav }
+                return lhs.name.localizedCaseInsensitiveCompare(rhs.name) == .orderedAscending
+            }
+            state = .loaded(sorted)
         } catch {
             print("❌ Error in loadNearbyTheaters(): \(error.localizedDescription)")
             state = .error(error)
@@ -73,3 +81,4 @@ final class TheatersViewModel: ObservableObject {
         state = .idle
     }
 }
+
