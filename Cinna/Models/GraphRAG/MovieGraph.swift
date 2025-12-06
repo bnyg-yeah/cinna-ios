@@ -24,7 +24,10 @@ class MovieGraph {
         // Step 1: Create nodes
         for movie in movies {
             let genreIDs = genreMapping[movie.id] ?? []
-            let node = MovieNode(movie: movie)
+            var node = MovieNode(movie: movie)
+            
+            // Set genre connections
+            node.genreConnections = Set(genreIDs)
             nodes[movie.id] = node
             
             // Index by genre
@@ -89,8 +92,6 @@ class MovieGraph {
             weight += 0.3 * (1.0 - ratingDiff / 2.0)
         }
 
-        // no year logic at all now
-
         return weight > 0.3 ? weight : nil
     }
 
@@ -110,6 +111,43 @@ class MovieGraph {
             
             nodes[id]?.graphScore = centralityScore
         }
+    }
+    
+    // MARK: - User Ratings Integration
+    
+    /// Apply user ratings to boost graph scores (1-4 star scale)
+    func applyUserRatings(_ ratings: [Int: Int]) {
+        guard !ratings.isEmpty else { return }
+        
+        for (movieID, userRating) in ratings {
+            guard var node = nodes[movieID] else { continue }
+            
+            // Direct boost based on user rating (1-4 scale)
+            let directBoost = Double(userRating) * 2.0  // 1→2.0, 2→4.0, 3→6.0, 4→8.0
+            node.graphScore += directBoost
+            
+            // Also boost connected movies (spread the preference)
+            if userRating >= 3 {  // High rating (3-4 stars)
+                let connectionBoost = Double(userRating - 2) * 1.5  // 3→1.5, 4→3.0
+                
+                for connectedID in node.connectedMovieIDs {
+                    nodes[connectedID]?.graphScore += connectionBoost
+                }
+            }
+            
+            // Penalize connected movies for low ratings
+            if userRating <= 2 {  // Low rating (1-2 stars)
+                let penalty = Double(3 - userRating) * 0.5  // 1→-1.0, 2→-0.5
+                
+                for connectedID in node.connectedMovieIDs {
+                    nodes[connectedID]?.graphScore -= penalty
+                }
+            }
+            
+            nodes[movieID] = node
+        }
+        
+        print("⭐ Applied \(ratings.count) user ratings to graph")
     }
 
     

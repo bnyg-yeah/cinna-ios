@@ -6,6 +6,8 @@
 //  Updated with GraphRAG by Team Cinna on 11/30/25.
 //
 
+
+
 import Foundation
 
 /// Smart recommendation engine that uses GraphRAG and user preferences
@@ -20,7 +22,7 @@ class MovieRecommendationEngine {
     // MARK: - Main Recommendation Method
     
     /// Get personalized movie recommendations based on user's genre preferences
-    /// Now powered by GraphRAG!
+    /// Now powered by GraphRAG with user ratings!
     func getPersonalizedRecommendations(
         selectedGenres: Set<GenrePreferences>,
         page: Int = 1
@@ -34,7 +36,7 @@ class MovieRecommendationEngine {
         let genreIDs = selectedGenres.map { $0.tmdbID }
         
         // Step 1: Fetch movies from TMDb (get more for better graph)
-        let fetchedMovies = try await fetchMoviesForGraph(genreIDs: genreIDs, pages: 3)
+        let fetchedMovies = try await fetchMoviesForGraph(genreIDs: genreIDs, pages: 2)
         
         // Step 2: Build genre mapping (which genres each movie has)
         let genreMapping = await fetchGenreMappings(for: fetchedMovies)
@@ -42,7 +44,14 @@ class MovieRecommendationEngine {
         // Step 3: Build GraphRAG knowledge graph
         graphRAG.buildGraph(from: fetchedMovies, genreMapping: genreMapping)
         
-        // Step 4: Get recommendations using GraphRAG
+        // Step 4: Apply user ratings to personalize
+        let userRatings = UserRatings.shared.snapshot()
+        if !userRatings.isEmpty {
+            graphRAG.applyUserRatings(userRatings)
+            print("⭐ Applied \(userRatings.count) user ratings")
+        }
+        
+        // Step 5: Get recommendations using GraphRAG
         if useGraphRAG && graphRAG.isReady() {
             let recommendations = graphRAG.getRecommendations(for: genreIDs, limit: 20)
             print("✅ Using GraphRAG: \(recommendations.count) recommendations")

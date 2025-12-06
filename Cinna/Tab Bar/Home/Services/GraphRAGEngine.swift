@@ -35,6 +35,17 @@ class GraphRAGEngine {
         print("✅ GraphRAG built: \(stats.totalMovies) movies, \(stats.totalConnections) connections")
     }
     
+    
+    /// Apply user ratings to personalize recommendations
+    func applyUserRatings(_ ratings: [Int: Int]) {
+        guard isGraphBuilt else {
+            print("⚠️ Cannot apply ratings - graph not built yet")
+            return
+        }
+            graph.applyUserRatings(ratings)
+        }
+    
+    
     // MARK: - Get Recommendations
     
     /// Get GraphRAG-powered recommendations based on selected genres
