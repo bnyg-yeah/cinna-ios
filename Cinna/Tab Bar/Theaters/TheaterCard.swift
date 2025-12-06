@@ -8,27 +8,45 @@
 import SwiftUI
 import MapKit
 import CoreLocation
+import UIKit
 
 struct TheaterCard: View {
     let theater: Theater
 
     var body: some View {
         HStack(alignment: .top, spacing: 16) {
-            // Leading visual: small map snapshot placeholder to mirror Movie poster
-            ZStack {
-                LinearGradient(
-                    colors: [Color(.systemOrange), Color(.systemPink)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-                Image(systemName: "popcorn.fill")
-                    .font(.system(size: 28))
-                    .foregroundStyle(.white)
+            // Leading visual: brand logo if available, else default logo to yn
+            Group {
+                let imageName = logoAssetName ?? "logo_default"
+                if let ui = UIImage(named: imageName) {
+                    Image(uiImage: ui)
+                        .resizable()
+                        .scaledToFit()
+                        .frame(width: 72, height: 72)
+                        .background(
+                            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                                .fill(Color.clear)
+                                .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        )
+                        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                        .accessibilityHidden(true)
+                } else {
+                    ZStack {
+                        LinearGradient(
+                            colors: [Color(.systemTeal), Color(.systemIndigo)],
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+                        Image(systemName: "theatermasks")
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
+                    .frame(width: 72, height: 72)
+                    .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    .accessibilityHidden(true)
+                }
             }
-            .frame(width: 72, height: 72)
-            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .glassEffect(in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 8) {
                 Text(theater.name)
@@ -68,5 +86,15 @@ struct TheaterCard: View {
         .accessibilityElement(children: .combine)
         .accessibilityLabel("\(theater.name), \(theater.address ?? "Address unavailable")\(theater.rating != nil ? ", rated \(String(format: "%.1f", theater.rating!))" : "")")
     }
-}
 
+    // MARK: - Branding
+    private var logoAssetName: String? {
+        switch theater.chain {
+        case .amc: return "logo_amc"
+        case .regal: return "logo_regal"
+        case .cinemark: return "logo_cinemark"
+        case .alamo: return "logo_alamo"
+        case .other: return nil
+        }
+    }
+}
