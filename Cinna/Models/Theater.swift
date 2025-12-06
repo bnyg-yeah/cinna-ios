@@ -14,6 +14,7 @@ struct Theater: Identifiable, Hashable {
     let name: String
     let rating: Double?
     let address: String?
+    let website: String?
     let location: CLLocationCoordinate2D
 
     /// Optional external IDs for direct ticketing integrations
@@ -27,6 +28,7 @@ struct Theater: Identifiable, Hashable {
         name: String,
         rating: Double?,
         address: String?,
+        website: String? = nil,
         location: CLLocationCoordinate2D,
         amcTheaterID: String? = nil,
         regalTheaterID: String? = nil,
@@ -37,6 +39,7 @@ struct Theater: Identifiable, Hashable {
         self.name = name
         self.rating = rating
         self.address = address
+        self.website = website
         self.location = location
         self.amcTheaterID = amcTheaterID
         self.regalTheaterID = regalTheaterID

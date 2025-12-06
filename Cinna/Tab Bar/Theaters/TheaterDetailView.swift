@@ -172,35 +172,68 @@ struct TheaterDetailView: View {
     private func openTickets() {
         switch theater.chain {
         case .amc:
+            // AMC has reliable URL construction
             if let web = amcWebURL() {
                 safariItem = SafariItem(url: web)
             } else if let app = amcDeepLinkURL() {
                 UIApplication.shared.open(app)
-            } else if let fallback = fandangoURL() {
-                safariItem = SafariItem(url: fallback)
+            } else if let google = googleMapsURL() {
+                safariItem = SafariItem(url: google)
             }
-        case .regal:
-            if let web = regalWebURL() {
-                safariItem = SafariItem(url: web)
-            } else if let fallback = fandangoURL() {
-                safariItem = SafariItem(url: fallback)
-            }
-        case .cinemark:
-            if let url = URL(string: "https://www.cinemark.com/") {
-                safariItem = SafariItem(url: url)
-            } else if let fallback = fandangoURL() {
-                safariItem = SafariItem(url: fallback)
-            }
-        case .alamo:
-            if let url = URL(string: "https://drafthouse.com/") {
-                safariItem = SafariItem(url: url)
-            } else if let fallback = fandangoURL() {
-                safariItem = SafariItem(url: fallback)
-            }
+        case .regal, .cinemark, .alamo:
+            if let web = theater.website, let url = URL(string: web) {
+                    safariItem = SafariItem(url: url)
+                    return
+                }
+                if let chainWeb = chainSpecificURL() {
+                    safariItem = SafariItem(url: chainWeb)
+                    return
+                }
+                if let google = googleMapsURL() {
+                    safariItem = SafariItem(url: google)
+                    return
+                }
+                if let fallback = fandangoURL() {
+                    safariItem = SafariItem(url: fallback)
+                    return
+                }
         case .other:
-            if let url = fandangoURL() {
-                safariItem = SafariItem(url: url)
-            }
+            if let web = theater.website, let url = URL(string: web) {
+                    safariItem = SafariItem(url: url)
+                    return
+                }
+                if let google = googleMapsURL() {
+                    safariItem = SafariItem(url: google)
+                    return
+                }
+                if let fallback = fandangoURL() {
+                    safariItem = SafariItem(url: fallback)
+                    return
+                }
+        }
+    }
+    
+    // MARK: - Google Maps/Search URL
+    private func googleMapsURL() -> URL? {
+        // Use Google Maps search with theater name and location
+        // This will show the theater's Google Business Profile with links to buy tickets
+        let query = "\(theater.name) \(theater.address ?? "")".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+        
+        // Google Maps (shows location + website link)
+        return URL(string: "https://www.google.com/maps/search/?api=1&query=\(query)&query_place_id=\(theater.id)")
+    }
+    
+    // MARK: - Chain-specific URLs
+    private func chainSpecificURL() -> URL? {
+        switch theater.chain {
+        case .regal:
+            return regalWebURL()
+        case .cinemark:
+            return cinemarkWebURL()
+        case .alamo:
+            return alamoWebURL()
+        default:
+            return nil
         }
     }
 
@@ -222,25 +255,67 @@ struct TheaterDetailView: View {
     }
 
     // MARK: - Regal
-    private func regalDeepLinkURL() -> URL? {
-        // If Regal publishes an app scheme, place it here. For now, none.
+    private func regalWebURL() -> URL? {
+        // If we have a known Regal theater ID, link directly to the theatre page.
+        if let id = theater.regalTheaterID, !id.isEmpty {
+            return URL(string: "https://www.regmovies.com/theaters/regal-cinema/\(id)")
+        }
+        
+        // Fallback: Google Maps since we can't construct reliable URLs without ID
+        return nil
+    }
+    
+    private func cinemarkWebURL() -> URL? {
+        // If we have extracted Cinemark ID, use it
+        if let id = theater.cinemarkTheaterID, !id.isEmpty {
+            return URL(string: "https://www.cinemark.com/\(id)")
+        }
+        
+        // Try to construct direct theater URL
+        // Format: https://www.cinemark.com/theatres/[state-abbreviation]/[city]/[theater-name]
+        if let address = theater.address {
+            let parts = address.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            if parts.count >= 2 {
+                let city = slugify(parts[0])
+                let state = parts[1].trimmingCharacters(in: .whitespacesAndNewlines).prefix(2)
+                let name = slugify(theater.name.replacingOccurrences(of: "Cinemark", with: "").trimmingCharacters(in: .whitespaces))
+                
+                if !city.isEmpty && !String(state).isEmpty && !name.isEmpty {
+                    return URL(string: "https://www.cinemark.com/theatres/\(state.lowercased())/\(city)/\(name)")
+                }
+            }
+        }
+        
+        // Fallback: Google Maps
+        return nil
+    }
+    
+    private func alamoWebURL() -> URL? {
+        // If we have extracted city from their website, use it
+        if let city = theater.alamoTheaterID, !city.isEmpty {
+            return URL(string: "https://drafthouse.com/\(city)")
+        }
+        
+        // Try to construct from address
+        if let address = theater.address {
+            let parts = address.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            if let city = parts.first {
+                let citySlug = slugify(city)
+                if !citySlug.isEmpty {
+                    return URL(string: "https://drafthouse.com/\(citySlug)")
+                }
+            }
+        }
+        
+        // Fallback: Google Maps
         return nil
     }
 
-    private func regalWebURL() -> URL? {
-        // If we have a known Regal theater ID, link directly to the theatre page.
-        if let id = theater.regalTheaterID, let url = URL(string: "https://www.regmovies.com/theatres/\(id)") {
-            return url
-        }
-        // Fallback: site search for the theater name and city
-        let query = searchQuery()
-        return URL(string: "https://www.regmovies.com/search?query=\(query)")
-    }
-
-    // MARK: - Fandango (others)
+    // MARK: - Fandango with specific theater
     private func fandangoURL() -> URL? {
+        // Fandango allows theater search by name and location
         let query = searchQuery()
-        return URL(string: "https://www.fandango.com/")
+        return URL(string: "https://www.fandango.com/search?q=\(query)")
     }
 
     // MARK: - Helpers
@@ -270,7 +345,7 @@ struct TheaterDetailView: View {
             let parts = address.split(separator: ",").map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             if let city = parts.first { q += " \(city)" }
         }
-        return q.replacingOccurrences(of: " ", with: "+")
+        return q.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? q.replacingOccurrences(of: " ", with: "+")
     }
 
     // MARK: - Branding
@@ -306,49 +381,22 @@ struct TheaterDetailView: View {
 
     private var ticketingSubtitle: String {
         switch theater.chain {
-        case .amc: return "Buy your tickets from AMC here!"
-        case .regal: return "Buy your tickets from Regal here!"
-        case .cinemark: return "Buy your tickets from Cinemark here!"
-        case .alamo: return "Buy your tickets from Alamo here!"
-        case .other: return "We’ll redirect you to Fandango to buy tickets"
-        }
-    }
-    
-    // Fallback view used when BuyTicketsView isn't available in the build target
-    private struct TicketsFallbackView: View {
-        let theater: Theater
-
-        var body: some View {
-            List {
-                Section("Theater") {
-                    Text(theater.name).font(.headline)
-                    if let addr = theater.address { Text(addr).font(.subheadline).foregroundColor(.secondary) }
-                }
-                Section("Buy Tickets") {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Ticketing module not found in this build.")
-                            .font(.subheadline)
-                            .foregroundColor(.secondary)
-                        Text("You can still buy tickets on the web.")
-                            .font(.footnote)
-                            .foregroundColor(.secondary)
-                        Button {
-                            openRedirect()
-                        } label: {
-                            Label("Find showtimes on the web", systemImage: "safari")
-                        }
-                    }
-                }
-            }
-            .navigationTitle("Buy Tickets")
-            .navigationBarTitleDisplayMode(.inline)
-        }
-
-        private func openRedirect() {
-            let query = theater.name.replacingOccurrences(of: " ", with: "+")
-            if let url = URL(string: "https://www.fandango.com/search?q=\(query)") {
-                UIApplication.shared.open(url)
-            }
+        case .amc:
+            return "Buy your tickets from AMC here!"
+        case .regal:
+            return theater.website != nil
+                ? "Buy your tickets from Regal here!"
+                : ""
+        case .cinemark:
+            return theater.website != nil
+                ? "Buy your tickets from Cinemark here!"
+                : ""
+        case .alamo:
+            return theater.website != nil
+                ? "Buy your tickets from Alamo here!"
+                : ""
+        case .other:
+            return "Buy your tickets here!"
         }
     }
 }
@@ -362,4 +410,3 @@ struct TheaterDetailView: View {
         location: CLLocationCoordinate2D(latitude: 37.78455, longitude: -122.40334)
     ))
 }
-
