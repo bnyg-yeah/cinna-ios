@@ -27,6 +27,7 @@
 		D2674E582E98978100FF84BD /* Cinna.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cinna.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2674E592E98978100FF84BD /* CinnaTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CinnaTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		D2674E5A2E98978100FF84BD /* CinnaUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = CinnaUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		D2F8E67D2EE4C7420080E000 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -88,6 +89,7 @@
 		91EAF7272E85C97D009E1489 = {
 			isa = PBXGroup;
 			children = (
+				D2F8E67D2EE4C7420080E000 /* Secrets.xcconfig */,
 				91EAF7322E85C97D009E1489 /* Cinna */,
 				91EAF7402E85C97F009E1489 /* CinnaTests */,
 				91EAF74A2E85C97F009E1489 /* CinnaUITests */,
