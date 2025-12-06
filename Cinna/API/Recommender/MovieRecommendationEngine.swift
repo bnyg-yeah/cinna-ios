@@ -6,8 +6,6 @@
 //  Updated with GraphRAG by Team Cinna on 11/30/25.
 //
 
-
-
 import Foundation
 
 /// Smart recommendation engine that uses GraphRAG and user preferences
@@ -25,6 +23,7 @@ class MovieRecommendationEngine {
     /// Now powered by GraphRAG with user ratings!
     func getPersonalizedRecommendations(
         selectedGenres: Set<GenrePreferences>,
+        selectedFilmmakingPreferences: Set<FilmmakingPreferences> = [],
         page: Int = 1
     ) async throws -> [TMDbMovie] {
         // If user hasn't selected any genres, return popular movies
@@ -51,7 +50,14 @@ class MovieRecommendationEngine {
             print("⭐ Applied \(userRatings.count) user ratings")
         }
         
-        // Step 5: Get recommendations using GraphRAG
+        // Step 5: Apply filmmaking preferences
+        if !selectedFilmmakingPreferences.isEmpty {
+            // Fetch keywords for movies
+            let movieKeywords = await fetchMovieKeywords(for: fetchedMovies)
+            graphRAG.applyFilmmakingPreferences(selectedFilmmakingPreferences, movieKeywords: movieKeywords)
+        }
+        
+        // Step 6: Get recommendations using GraphRAG
         if useGraphRAG && graphRAG.isReady() {
             let recommendations = graphRAG.getRecommendations(for: genreIDs, limit: 20)
             print("✅ Using GraphRAG: \(recommendations.count) recommendations")
@@ -100,6 +106,22 @@ class MovieRecommendationEngine {
         let genreMapping = await TMDbService.batchFetchGenres(for: movieIDs)
         
         return genreMapping
+    }
+    
+    // MARK: - Fetch Movie Keywords
+    
+    /// Fetch keywords for movies to enable filmmaking preference scoring
+    private func fetchMovieKeywords(for movies: [TMDbMovie]) async -> [Int: [String]] {
+        var keywordMapping: [Int: [String]] = [:]
+        
+        for movie in movies {
+            if let details = try? await TMDbService.getMovieDetails(movieID: movie.id),
+               let keywords = details.keywords?.keywords {
+                keywordMapping[movie.id] = keywords.map { $0.name }
+            }
+        }
+        
+        return keywordMapping
     }
     
     // MARK: - Similar Movies (GraphRAG Feature)

@@ -122,25 +122,26 @@ class MovieGraph {
         for (movieID, userRating) in ratings {
             guard var node = nodes[movieID] else { continue }
             
-            // Direct boost based on user rating (1-4 scale)
-            let directBoost = Double(userRating) * 2.0  // 1→2.0, 2→4.0, 3→6.0, 4→8.0
-            node.graphScore += directBoost
-            
-            // Also boost connected movies (spread the preference)
-            if userRating >= 3 {  // High rating (3-4 stars)
-                let connectionBoost = Double(userRating - 2) * 1.5  // 3→1.5, 4→3.0
+            if userRating >= 3 {
+                // HIGH RATING (3-4 stars) → BOOST
+                let directBoost = Double(userRating) * 2.0  // 3→6.0, 4→8.0
+                node.graphScore += directBoost
                 
+                // Boost connected movies
+                let connectionBoost = Double(userRating - 2) * 1.5  // 3→1.5, 4→3.0
                 for connectedID in node.connectedMovieIDs {
                     nodes[connectedID]?.graphScore += connectionBoost
                 }
-            }
-            
-            // Penalize connected movies for low ratings
-            if userRating <= 2 {  // Low rating (1-2 stars)
-                let penalty = Double(3 - userRating) * 0.5  // 1→-1.0, 2→-0.5
                 
+            } else {
+                // LOW RATING (1-2 stars) → PENALTY
+                let directPenalty = Double(3 - userRating) * 2.0  // 2→-2.0, 1→-4.0
+                node.graphScore -= directPenalty
+                
+                // Penalize connected movies
+                let connectionPenalty = Double(3 - userRating) * 0.5  // 2→-0.5, 1→-1.0
                 for connectedID in node.connectedMovieIDs {
-                    nodes[connectedID]?.graphScore -= penalty
+                    nodes[connectedID]?.graphScore -= connectionPenalty
                 }
             }
             
@@ -148,6 +149,41 @@ class MovieGraph {
         }
         
         print("⭐ Applied \(ratings.count) user ratings to graph")
+    }
+    
+    // MARK: - Filmmaking Preferences Integration
+    
+    /// Apply filmmaking preferences based on movie keywords
+    func applyFilmmakingPreferences(
+        _ preferences: Set<FilmmakingPreferences>,
+        movieKeywords: [Int: [String]]
+    ) {
+        guard !preferences.isEmpty else { return }
+        
+        for (movieID, _) in nodes {
+            guard let keywords = movieKeywords[movieID] else { continue }
+            
+            var boost = 0.0
+            
+            for preference in preferences {
+                // Get keywords for this preference
+                let preferenceKeywords = preference.keywords
+                
+                // Count how many of the movie's keywords match
+                let matchCount = keywords.filter { movieKeyword in
+                    preferenceKeywords.contains(where: { prefKeyword in
+                        movieKeyword.lowercased().contains(prefKeyword.lowercased())
+                    })
+                }.count
+                
+                // Each match = +0.5 boost
+                boost += Double(matchCount) * 0.5
+            }
+            
+            nodes[movieID]?.graphScore += boost
+        }
+        
+        print("🎬 Applied \(preferences.count) filmmaking preferences")
     }
 
     

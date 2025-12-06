@@ -39,4 +39,22 @@ enum FilmmakingPreferences: String, CaseIterable, Identifiable, Hashable {
         case .visualEffects: return "sparkles"
         }
     }
+    
+    // Keywords that indicate quality in each filmmaking area
+    var keywords: [String] {
+        switch self {
+        case .cinematography:
+            return ["beautiful", "visual", "visually stunning", "cinematography", "gorgeous", "breathtaking"]
+        case .directing:
+            return ["masterpiece", "direction", "brilliant", "visionary"]
+        case .acting:
+            return ["performance", "acting", "compelling", "powerful"]
+        case .writing:
+            return ["story", "screenplay", "narrative", "plot"]
+        case .sound:
+            return ["soundtrack", "music", "score", "sound design"]
+        case .visualEffects:
+            return ["visual effects", "cgi", "vfx", "stunning visuals"]
+        }
+    }
 }

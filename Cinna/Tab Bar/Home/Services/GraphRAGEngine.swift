@@ -45,6 +45,15 @@ class GraphRAGEngine {
             graph.applyUserRatings(ratings)
         }
     
+    // 
+
+    func applyFilmmakingPreferences(
+        _ preferences: Set<FilmmakingPreferences>,
+        movieKeywords: [Int: [String]]
+    ) {
+        guard isGraphBuilt else { return }
+        graph.applyFilmmakingPreferences(preferences, movieKeywords: movieKeywords)
+    }
     
     // MARK: - Get Recommendations
     
