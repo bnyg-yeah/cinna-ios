@@ -16,6 +16,10 @@ struct BackdropView: View {
     @EnvironmentObject private var userInfo: UserInfoData //for user photos
     
     @State private var selectedUserPhotoIndex: Int?
+    @State private var isBlending = false
+    @State private var blendedImage: UIImage?
+    @State private var blendError: String?
+    @State private var readyToShowResult = false
     
     private var storedImage: StoredImage? {
         MovieDataStore.shared.entry(for: movieID)?.backdrops.indices.contains(index) == true
@@ -42,17 +46,16 @@ struct BackdropView: View {
                         image
                             .resizable()
                             .scaledToFit()
-                            .glassEffect(
-                                .regular.interactive(),
-                                in: RoundedRectangle(cornerRadius: 18)
+                            .glassEffect(in: .rect()
                             )
+                            .padding(.horizontal, 12)
                     },
                     placeholder: {
                         ProgressView()
                     }
                 ) // end image
                 
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .center, spacing: 8) {
                     Text("Select a photo to see yourself in the scene!")
                         .font(.headline)
                         .foregroundColor(.white)
@@ -73,34 +76,57 @@ struct BackdropView: View {
                                     Image(uiImage: photo)
                                         .resizable()
                                         .scaledToFill()
-                                        .frame(width: 120, height: 120)
+                                        .frame(width: 160, height: 160)
                                         .clipShape(RoundedRectangle(cornerRadius: 12))
-                                        .overlay(
-                                            RoundedRectangle(cornerRadius: 12)
-                                                .stroke(selectedUserPhotoIndex == idx ? Color.cyan : Color.clear, lineWidth: 3)
-                                        )
-                                        .overlay(alignment: .topTrailing) {
+                                        .glassEffect(
+                                                .regular.interactive(),
+                                                in: RoundedRectangle(cornerRadius: 12)
+                                            )
+                                        .overlay(alignment: .center) {
                                             if selectedUserPhotoIndex == idx {
                                                 Image(systemName: "checkmark.circle.fill")
-                                                    .foregroundColor(.cyan)
-                                                    .padding(6)
+                                                    .font(.system(size: 20, weight: .semibold))
+                                                    .foregroundColor(.white)
                                             }
                                         }
+                                        .overlay(
+                                            RoundedRectangle(cornerRadius: 12)
+                                                .stroke(selectedUserPhotoIndex == idx ? Color.white : Color.clear, lineWidth: 2)
+                                        )
                                 }
                                 .buttonStyle(.plain)
                             }
                         }
-                        .padding(.vertical, 6)
                     }
                 }
+                
+                // Always-visible Blend button, placed below the user photos, sized to its label
+                Button {
+                    readyToShowResult = true
+                } label: {
+                    Text("Blend")
+                        .font(.title3.weight(.semibold))
+                }
+                .buttonStyle(.glassProminent)
+                .controlSize(.large)
+                .disabled(selectedUserPhoto == nil || storedImage?.url_w780 == nil)
+                
             }
-            .padding(.vertical, 6)
-            .navigationTitle("Backdrop")
+            .navigationTitle("Movie Scene Blend")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Close") {
                         dismiss()
                     }
+                }
+            }
+            .sheet(isPresented: $readyToShowResult) {
+                if let selectedUserPhoto, let backdropURL = storedImage?.url_w780 {
+                    SceneBlendResultView(
+                        backdropURL: backdropURL,
+                        userImage: selectedUserPhoto
+                    )
                 }
             }
         } // end NavigationStack

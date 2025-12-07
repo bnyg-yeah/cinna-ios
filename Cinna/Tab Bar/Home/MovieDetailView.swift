@@ -170,10 +170,12 @@ struct MovieDetailView: View {
                         .foregroundColor(.white.opacity(0.8))
                 } else {
                     if !backdrops.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
+                        VStack(alignment: .leading, spacing: 6) {
                             Text("Backdrops")
                                 .font(.headline)
                                 .foregroundColor(.white)
+                                .padding(.bottom, 6)
+                            
                             ScrollView(.horizontal, showsIndicators: false) {
                                 HStack(spacing: 12) {
                                     
@@ -196,7 +198,7 @@ struct MovieDetailView: View {
                                                 case .failure:
                                                     Color.white.opacity(0.1)
                                                         .frame(width: 240, height: 160)
-                                                        .glassEffect(.regular.interactive(), in: RoundedRectangle(cornerRadius: 12))
+                                                        .glassEffect(.regular.interactive(), in: .rect())
                                                 @unknown default:
                                                     EmptyView()
                                                 }
@@ -204,52 +206,54 @@ struct MovieDetailView: View {
                                         }
                                     }
                                 }
-                                .padding(.vertical, 4)
-                            }
-                        }
+                            }//end backdrops scroll view
+                            Text("Tap a backdrop to generate an AI scene blend!")
+                                .font(.footnote)
+                                .foregroundColor(.white)
+                        }//end backdrops vstack
                     }
                     
-                    if !logos.isEmpty {
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text("Logos")
-                                .font(.headline)
-                                .foregroundColor(.white)
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack(spacing: 12) {
-                                    ForEach(logos) { img in
-                                        if let url = TMDbService.imageURL(path: img.filePath, size: "w300") {
-                                            AsyncImage(url: url) { phase in
-                                                switch phase {
-                                                case .empty:
-                                                    ProgressView()
-                                                case .success(let image):
-                                                    image
-                                                        .resizable()
-                                                        .scaledToFit()
-                                                        .frame(height: 80)
-                                                        .padding(10)
-                                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                                        .glassEffect(.clear.interactive(),
-                                                                     in: RoundedRectangle(cornerRadius:12, style: .continuous))
-                                                    
-                                                    
-                                                case .failure:
-                                                    Color.white.opacity(0.1)
-                                                        .frame(width: 140, height: 80)
-                                                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                                                        .glassEffect(.clear.interactive(),
-                                                                     in: RoundedRectangle(cornerRadius:12, style: .continuous))
-                                                @unknown default:
-                                                    EmptyView()
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                                .padding(.vertical, 4)
-                            }
-                        }
-                    }//end logos
+//                    if !logos.isEmpty {
+//                        VStack(alignment: .leading, spacing: 12) {
+//                            Text("Logos")
+//                                .font(.headline)
+//                                .foregroundColor(.white)
+//                            ScrollView(.horizontal, showsIndicators: false) {
+//                                HStack(spacing: 12) {
+//                                    ForEach(logos) { img in
+//                                        if let url = TMDbService.imageURL(path: img.filePath, size: "w300") {
+//                                            AsyncImage(url: url) { phase in
+//                                                switch phase {
+//                                                case .empty:
+//                                                    ProgressView()
+//                                                case .success(let image):
+//                                                    image
+//                                                        .resizable()
+//                                                        .scaledToFit()
+//                                                        .frame(height: 80)
+//                                                        .padding(10)
+//                                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+//                                                        .glassEffect(.clear.interactive(),
+//                                                                     in: RoundedRectangle(cornerRadius:12, style: .continuous))
+//                                                    
+//                                                    
+//                                                case .failure:
+//                                                    Color.white.opacity(0.1)
+//                                                        .frame(width: 140, height: 80)
+//                                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+//                                                        .glassEffect(.clear.interactive(),
+//                                                                     in: RoundedRectangle(cornerRadius:12, style: .continuous))
+//                                                @unknown default:
+//                                                    EmptyView()
+//                                                }
+//                                            }
+//                                        }
+//                                    }
+//                                }
+//                                .padding(.vertical, 4)
+//                            }
+//                        }
+//                    }//end logos
                 }//end loading images
                 
                 // ===== User Rating =====
@@ -258,7 +262,7 @@ struct MovieDetailView: View {
                         .font(.headline)
                         .foregroundColor(.white)
                     
-                    HStack(spacing: 8) {
+                    HStack(alignment: .center, spacing: 10) {
                         ForEach(1...4, id: \.self) { value in
                             Button {
                                 UserRatings.shared.setRating(value, for: movie.id)
@@ -295,29 +299,8 @@ struct MovieDetailView: View {
                     }
                 }//end rating
                 
-                // MARK: temporary User Photos display THIS WORKS
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Your photos")
-                    
-                    if userInfo.userPhotos.isEmpty {
-                        Text("No photos")
-                    }
-                    else {
-                        HStack(spacing:12) {
-                            ForEach(Array(userInfo.userPhotos.enumerated()), id: \.offset) {
-                                _, photo in
-                                Image(uiImage: photo)
-                                    .resizable()
-                                    .scaledToFill()
-                                    .frame(width: 140, height: 140)
-                            }
-                        }
-                        .padding(.vertical, 4)
-                    }
-                }//end temporary user photos display
                 
-                
-            }
+            }//end VStack of everything
             .padding(.top, 24)
             .padding(.horizontal, 24)
             .padding(.bottom, 24)
