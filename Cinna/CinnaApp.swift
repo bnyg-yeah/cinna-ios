@@ -29,6 +29,7 @@ struct CinnaApp: App {
             ContentView()
                 .environmentObject(userInfo)
                 .environmentObject(moviePreferences)
+                .preferredColorScheme(.dark)
         }
     }
 }
