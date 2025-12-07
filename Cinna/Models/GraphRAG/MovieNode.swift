@@ -12,6 +12,18 @@ struct MovieNode: Identifiable, Hashable {
     var connectedMovieIDs: Set<Int> = []
     var genreConnections: Set<Int> = []
     var graphScore: Double = 0.0
+    
+    // NEW: Embedding data
+    var textEmbedding: [Float]? = nil  // Semantic vector from reviews/description
+    var sourceText: String? = nil       // Text used to generate embedding
+    
+    // NEW: Filmmaking quality scores (derived from embeddings)
+    var actingScore: Double = 0.0
+    var directingScore: Double = 0.0
+    var cinematographyScore: Double = 0.0
+    var writingScore: Double = 0.0
+    var soundScore: Double = 0.0
+    var visualEffectsScore: Double = 0.0
 
     init(movie: TMDbMovie) {
         self.movie = movie
@@ -38,7 +50,7 @@ struct MovieEdge: Hashable {
     enum EdgeType {
         case sharedGenre
         case similarRating
-        case sameYear
+        case semanticSimilarity  // NEW: Based on embedding similarity
         case combined
     }
     

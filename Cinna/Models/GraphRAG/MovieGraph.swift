@@ -3,28 +3,45 @@
 //  Cinna
 //
 //  Created by Subhan Shrestha on 11/29/25.
+//  Enhanced with embedding-based semantic similarity
 //
 
 import Foundation
 
-/// Knowledge graph that stores movies and their relationships
+/// Knowledge graph that stores movies and their relationships with semantic understanding
 class MovieGraph {
     private var nodes: [Int: MovieNode] = [:]
     private var edges: Set<MovieEdge> = []
     private var genreIndex: [Int: Set<Int>] = [:]  // genreID -> Set of movieIDs
     
-    // MARK: - Build Graph
+    // Store preference embeddings for quality score calculation
+    private var preferenceEmbeddings: PreferenceEmbeddings?
     
-    /// Build the graph from an array of TMDb movies
-    func buildGraph(from movies: [TMDbMovie], genreMapping: [Int: [Int]]) {
+    // MARK: - Build Graph with Embeddings
+    
+    /// Build the graph from an array of TMDb movies with semantic embeddings
+    func buildGraph(
+        from movies: [TMDbMovie],
+        genreMapping: [Int: [Int]],
+        movieTexts: [Int: String],
+        movieEmbeddings: [Int: [Float]]
+    ) {
         nodes.removeAll()
         edges.removeAll()
         genreIndex.removeAll()
         
-        // Step 1: Create nodes
+        // Step 1: Create nodes with embeddings
         for movie in movies {
             let genreIDs = genreMapping[movie.id] ?? []
-            let node = MovieNode(movie: movie)
+            var node = MovieNode(movie: movie)
+            
+            // Set genre connections
+            node.genreConnections = Set(genreIDs)
+            
+            // Set embedding data
+            node.sourceText = movieTexts[movie.id]
+            node.textEmbedding = movieEmbeddings[movie.id]
+            
             nodes[movie.id] = node
             
             // Index by genre
@@ -33,7 +50,7 @@ class MovieGraph {
             }
         }
         
-        // Step 2: Create edges (relationships)
+        // Step 2: Create edges (relationships) with semantic similarity
         createEdges()
         
         // Step 3: Calculate graph scores (centrality)
@@ -42,7 +59,7 @@ class MovieGraph {
         print("📊 Graph built: \(nodes.count) movies, \(edges.count) connections")
     }
     
-    // MARK: - Create Relationships
+    // MARK: - Create Relationships with Semantic Similarity
     
     private func createEdges() {
         let nodeArray = Array(nodes.values)
@@ -52,7 +69,7 @@ class MovieGraph {
                 let node1 = nodeArray[i]
                 let node2 = nodeArray[j]
                 
-                // Calculate connection weight
+                // Calculate connection weight (includes semantic similarity)
                 if let weight = calculateConnectionWeight(node1, node2) {
                     let edge = MovieEdge(
                         sourceID: node1.id,
@@ -70,30 +87,33 @@ class MovieGraph {
         }
     }
     
-    /// Calculate how strongly two movies are connected
+    /// Calculate how strongly two movies are connected (including semantic similarity)
     private func calculateConnectionWeight(_ node1: MovieNode, _ node2: MovieNode) -> Double? {
         var weight: Double = 0.0
 
-        // shared genres
+        // 1. Shared genres (20% weight)
         let sharedGenres = node1.genreConnections.intersection(node2.genreConnections)
         if !sharedGenres.isEmpty {
-            weight += 0.5 * (
+            weight += 0.2 * (
                 Double(sharedGenres.count) /
                 Double(max(node1.genreConnections.count, node2.genreConnections.count))
             )
         }
 
-        // rating similarity
+        // 2. Rating similarity (15% weight)
         let ratingDiff = abs(node1.movie.voteAverage - node2.movie.voteAverage)
         if ratingDiff < 2.0 {
-            weight += 0.3 * (1.0 - ratingDiff / 2.0)
+            weight += 0.15 * (1.0 - ratingDiff / 2.0)
         }
-
-        // no year logic at all now
+        
+        // 3. Semantic similarity (65% weight) - NEW!
+        if let emb1 = node1.textEmbedding, let emb2 = node2.textEmbedding {
+            let similarity = EmbeddingService.cosineSimilarity(emb1, emb2)
+            weight += 0.65 * Double(similarity)
+        }
 
         return weight > 0.3 ? weight : nil
     }
-
     
     // MARK: - Graph Scores (Centrality)
     
@@ -111,7 +131,126 @@ class MovieGraph {
             nodes[id]?.graphScore = centralityScore
         }
     }
-
+    
+    // MARK: - Calculate Filmmaking Quality Scores
+    
+    /// Calculate filmmaking quality scores by comparing movie embeddings to preference embeddings
+    func calculateFilmmakingScores(preferenceEmbeddings: PreferenceEmbeddings) {
+        self.preferenceEmbeddings = preferenceEmbeddings
+        
+        for (id, node) in nodes {
+            guard let movieEmbedding = node.textEmbedding else { continue }
+            
+            // Calculate similarity to each preference dimension
+            if let actingEmb = preferenceEmbeddings.actingEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, actingEmb)
+                nodes[id]?.actingScore = Double(score) * 10.0  // Scale to 0-10
+            }
+            
+            if let directingEmb = preferenceEmbeddings.directingEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, directingEmb)
+                nodes[id]?.directingScore = Double(score) * 10.0
+            }
+            
+            if let cinematographyEmb = preferenceEmbeddings.cinematographyEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, cinematographyEmb)
+                nodes[id]?.cinematographyScore = Double(score) * 10.0
+            }
+            
+            if let writingEmb = preferenceEmbeddings.writingEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, writingEmb)
+                nodes[id]?.writingScore = Double(score) * 10.0
+            }
+            
+            if let soundEmb = preferenceEmbeddings.soundEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, soundEmb)
+                nodes[id]?.soundScore = Double(score) * 10.0
+            }
+            
+            if let vfxEmb = preferenceEmbeddings.visualEffectsEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, vfxEmb)
+                nodes[id]?.visualEffectsScore = Double(score) * 10.0
+            }
+        }
+        
+        print("✅ Calculated filmmaking scores for \(nodes.count) movies")
+    }
+    
+    // MARK: - User Ratings Integration
+    
+    /// Apply user ratings to boost graph scores (1-4 star scale)
+    func applyUserRatings(_ ratings: [Int: Int]) {
+        guard !ratings.isEmpty else { return }
+        
+        for (movieID, userRating) in ratings {
+            guard var node = nodes[movieID] else { continue }
+            
+            if userRating >= 3 {
+                // HIGH RATING (3-4 stars) → BOOST
+                let directBoost = Double(userRating) * 2.0  // 3→6.0, 4→8.0
+                node.graphScore += directBoost
+                
+                // Boost connected movies
+                let connectionBoost = Double(userRating - 2) * 1.5  // 3→1.5, 4→3.0
+                for connectedID in node.connectedMovieIDs {
+                    nodes[connectedID]?.graphScore += connectionBoost
+                }
+                
+            } else {
+                // LOW RATING (1-2 stars) → PENALTY
+                let directPenalty = Double(3 - userRating) * 2.0  // 2→-2.0, 1→-4.0
+                node.graphScore -= directPenalty
+                
+                // Penalize connected movies
+                let connectionPenalty = Double(3 - userRating) * 0.5  // 2→-0.5, 1→-1.0
+                for connectedID in node.connectedMovieIDs {
+                    nodes[connectedID]?.graphScore -= connectionPenalty
+                }
+            }
+            
+            nodes[movieID] = node
+        }
+        
+        print("⭐ Applied \(ratings.count) user ratings to graph")
+    }
+    
+    // MARK: - Filmmaking Preferences Integration
+    
+    /// Apply filmmaking preferences using embedding-based quality scores
+    func applyFilmmakingPreferences(_ preferences: Set<FilmmakingPreferences>) {
+        guard !preferences.isEmpty else { return }
+        
+        for (id, node) in nodes {
+            var boost = 0.0
+            
+            for preference in preferences {
+                let score: Double
+                switch preference {
+                case .acting:
+                    score = node.actingScore
+                case .directing:
+                    score = node.directingScore
+                case .cinematography:
+                    score = node.cinematographyScore
+                case .writing:
+                    score = node.writingScore
+                case .sound:
+                    score = node.soundScore
+                case .visualEffects:
+                    score = node.visualEffectsScore
+                }
+                
+                // Boost movies with high scores in selected dimensions
+                if score >= 6.0 {
+                    boost += (score - 5.0) * 0.5
+                }
+            }
+            
+            nodes[id]?.graphScore += boost
+        }
+        
+        print("🎬 Applied \(preferences.count) filmmaking preferences")
+    }
     
     // MARK: - Query Interface
     
@@ -128,7 +267,7 @@ class MovieGraph {
         return movieIDs.compactMap { nodes[$0] }
     }
     
-    /// Get movies similar to a given movie (connected in graph)
+    /// Get movies similar to a given movie (connected in graph by semantic similarity)
     func getSimilarMovies(to movieID: Int, limit: Int = 10) -> [MovieNode] {
         guard let node = nodes[movieID] else { return [] }
         
@@ -174,10 +313,28 @@ class MovieGraph {
         // Get all movies matching genres
         var candidates = getMoviesForGenres(genreIDs)
         
-        // Sort by graph score (combines centrality + rating)
+        // Sort by graph score (combines centrality + rating + user preferences)
         candidates.sort { $0.graphScore > $1.graphScore }
         
         return Array(candidates.prefix(limit))
+    }
+    
+    // MARK: - Get Filmmaking Scores
+    
+    /// Get filmmaking scores for a specific movie
+    func getFilmmakingScores(for movieID: Int) -> FilmmakingScoresSummary? {
+        guard let node = nodes[movieID] else { return nil }
+        
+        return FilmmakingScoresSummary(
+            movieID: movieID,
+            movieTitle: node.movie.title,
+            actingScore: node.actingScore,
+            directingScore: node.directingScore,
+            cinematographyScore: node.cinematographyScore,
+            writingScore: node.writingScore,
+            soundScore: node.soundScore,
+            visualEffectsScore: node.visualEffectsScore
+        )
     }
     
     // MARK: - Stats
@@ -199,4 +356,17 @@ struct GraphStats {
     let totalConnections: Int
     let averageConnections: Double
     let genresIndexed: Int
+    
+
+}
+
+struct FilmmakingScoresSummary {
+    let movieID: Int
+    let movieTitle: String
+    let actingScore: Double
+    let directingScore: Double
+    let cinematographyScore: Double
+    let writingScore: Double
+    let soundScore: Double
+    let visualEffectsScore: Double
 }

@@ -20,9 +20,10 @@ class MovieRecommendationEngine {
     // MARK: - Main Recommendation Method
     
     /// Get personalized movie recommendations based on user's genre preferences
-    /// Now powered by GraphRAG!
+    /// Now powered by GraphRAG with user ratings and embeddings!
     func getPersonalizedRecommendations(
         selectedGenres: Set<GenrePreferences>,
+        selectedFilmmakingPreferences: Set<FilmmakingPreferences> = [],
         page: Int = 1
     ) async throws -> [TMDbMovie] {
         // If user hasn't selected any genres, return popular movies
@@ -34,15 +35,35 @@ class MovieRecommendationEngine {
         let genreIDs = selectedGenres.map { $0.tmdbID }
         
         // Step 1: Fetch movies from TMDb (get more for better graph)
-        let fetchedMovies = try await fetchMoviesForGraph(genreIDs: genreIDs, pages: 3)
+        let fetchedMovies = try await fetchMoviesForGraph(genreIDs: genreIDs, pages: 2)
         
         // Step 2: Build genre mapping (which genres each movie has)
         let genreMapping = await fetchGenreMappings(for: fetchedMovies)
         
-        // Step 3: Build GraphRAG knowledge graph
-        graphRAG.buildGraph(from: fetchedMovies, genreMapping: genreMapping)
+        // Step 3: Generate embeddings for semantic understanding
+        let (movieTexts, movieEmbeddings) = await generateMovieEmbeddings(for: fetchedMovies)
         
-        // Step 4: Get recommendations using GraphRAG
+        // Step 4: Build GraphRAG knowledge graph with embeddings
+        await graphRAG.buildGraph(
+            from: fetchedMovies,
+            genreMapping: genreMapping,
+            movieTexts: movieTexts,
+            movieEmbeddings: movieEmbeddings
+        )
+        
+        // Step 5: Apply user ratings to personalize
+        let userRatings = UserRatings.shared.snapshot()
+        if !userRatings.isEmpty {
+            graphRAG.applyUserRatings(userRatings)
+            print("⭐ Applied \(userRatings.count) user ratings")
+        }
+        
+        // Step 6: Apply filmmaking preferences (embedding-based)
+        if !selectedFilmmakingPreferences.isEmpty {
+            graphRAG.applyFilmmakingPreferences(selectedFilmmakingPreferences)
+        }
+        
+        // Step 7: Get recommendations using GraphRAG
         if useGraphRAG && graphRAG.isReady() {
             let recommendations = graphRAG.getRecommendations(for: genreIDs, limit: 20)
             print("✅ Using GraphRAG: \(recommendations.count) recommendations")
@@ -91,6 +112,122 @@ class MovieRecommendationEngine {
         let genreMapping = await TMDbService.batchFetchGenres(for: movieIDs)
         
         return genreMapping
+    }
+    
+    // MARK: - Generate Movie Embeddings
+    
+    // MARK: - Generate Movie Embeddings (BATCH MODE - FAST!)
+
+    /// Generate embeddings for movies using batch processing
+    private func generateMovieEmbeddings(
+        for movies: [TMDbMovie]
+    ) async -> (texts: [Int: String], embeddings: [Int: [Float]]) {
+        var texts: [Int: String] = [:]
+        var embeddings: [Int: [Float]] = [:]
+        
+        print("🎬 Generating embeddings for \(movies.count) movies...")
+        
+        // Step 1: Fetch all reviews/details concurrently
+        var movieData: [(id: Int, text: String)] = []
+        
+        await withTaskGroup(of: (Int, String)?.self) { group in
+            for movie in movies {
+                group.addTask {
+                    do {
+                        async let reviewsTask = TMDbService.getReviews(movieID: movie.id, page: 1, maxPages: 1)
+                        async let detailsTask = TMDbService.getMovieDetails(movieID: movie.id, appendFields: ["keywords"])
+                        
+                        let reviews = try await reviewsTask
+                        let details = try await detailsTask
+                        
+                        let combinedText = self.buildCombinedText(
+                            movie: movie,
+                            details: details,
+                            reviews: reviews
+                        )
+                        
+                        return (movie.id, combinedText)
+                    } catch {
+                        print("  ✗ Failed to fetch data for \(movie.title): \(error)")
+                        return nil
+                    }
+                }
+            }
+            
+            for await result in group {
+                if let (id, text) = result {
+                    movieData.append((id, text))
+                }
+            }
+        }
+        
+        // Store texts
+        for (id, text) in movieData {
+            texts[id] = text
+        }
+        
+        // Step 2: BATCH generate all embeddings in ONE request
+        let textsOnly = movieData.map { $0.text }
+        
+        guard !textsOnly.isEmpty else {
+            print("⚠️ No texts to embed")
+            return (texts, embeddings)
+        }
+        
+        do {
+            let startTime = Date()
+            let generatedEmbeddings = try await EmbeddingService.shared.batchGenerateEmbeddings(for: textsOnly)
+            let elapsed = Date().timeIntervalSince(startTime)
+            
+            // Map embeddings back to movie IDs
+            for (index, (id, _)) in movieData.enumerated() {
+                if index < generatedEmbeddings.count {
+                    embeddings[id] = generatedEmbeddings[index]
+                }
+            }
+            
+            print("✅ Generated \(embeddings.count)/\(movies.count) embeddings in \(String(format: "%.2f", elapsed))s")
+        } catch {
+            print("❌ Batch embedding failed: \(error)")
+        }
+        
+        return (texts, embeddings)
+    }
+    
+    
+    /// Build combined text from multiple sources for embedding
+    private func buildCombinedText(
+        movie: TMDbMovie,
+        details: TMDbMovieDetails,
+        reviews: [TMDbService.TMDbReview]
+    ) -> String {
+        var parts: [String] = []
+        
+        // Add overview
+        if !movie.overview.isEmpty {
+            parts.append("Overview: \(movie.overview)")
+        }
+        
+        // Add tagline
+        if let tagline = details.tagline, !tagline.isEmpty {
+            parts.append("Tagline: \(tagline)")
+        }
+        
+        // Add keywords
+        if let keywords = details.keywords?.keywords {
+            let keywordText = keywords.map { $0.name }.joined(separator: ", ")
+            parts.append("Themes: \(keywordText)")
+        }
+        
+        // Add reviews (limit to 3 for token efficiency)
+        let reviewTexts = reviews.prefix(3).map { review in
+            String(review.content.prefix(300))  // Limit each review
+        }
+        if !reviewTexts.isEmpty {
+            parts.append("Audience Reviews: " + reviewTexts.joined(separator: " | "))
+        }
+        
+        return parts.joined(separator: "\n\n")
     }
     
     // MARK: - Similar Movies (GraphRAG Feature)

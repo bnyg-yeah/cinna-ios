@@ -77,6 +77,7 @@ struct Home: View {
             let engine = MovieRecommendationEngine.shared
             movies = try await engine.getPersonalizedRecommendations(
                 selectedGenres: moviePreferences.selectedGenres,
+                selectedFilmmakingPreferences: moviePreferences.selectedFilmmakingPreferences,
                 page: 1
             )
         } catch {
