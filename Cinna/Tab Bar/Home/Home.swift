@@ -84,15 +84,7 @@ struct Home: View {
                     }
                 }
             }
-            .background {
-                ZStack {
-                    BackgroundView()
-
-                    Color.clear
-                        .background(.ultraThinMaterial)
-                        .opacity(0.0001)
-                }
-            }
+            .background(BackgroundView())
 
             .navigationDestination(for: TMDbMovie.self) { movie in
                 MovieDetailView(movie: movie)
