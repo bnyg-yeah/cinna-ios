@@ -13,6 +13,7 @@ class MovieGraph {
     private var nodes: [Int: MovieNode] = [:]
     private var edges: Set<MovieEdge> = []
     private var genreIndex: [Int: Set<Int>] = [:]  // genreID -> Set of movieIDs
+    private let animationGenreID = 16
     
     // Store preference embeddings for quality score calculation
     private var preferenceEmbeddings: PreferenceEmbeddings?
@@ -90,7 +91,7 @@ class MovieGraph {
     /// Calculate how strongly two movies are connected (including semantic similarity)
     private func calculateConnectionWeight(_ node1: MovieNode, _ node2: MovieNode) -> Double? {
         var weight: Double = 0.0
-
+        
         // 1. Shared genres (20% weight)
         let sharedGenres = node1.genreConnections.intersection(node2.genreConnections)
         if !sharedGenres.isEmpty {
@@ -99,7 +100,7 @@ class MovieGraph {
                 Double(max(node1.genreConnections.count, node2.genreConnections.count))
             )
         }
-
+        
         // 2. Rating similarity (15% weight)
         let ratingDiff = abs(node1.movie.voteAverage - node2.movie.voteAverage)
         if ratingDiff < 2.0 {
@@ -111,7 +112,7 @@ class MovieGraph {
             let similarity = EmbeddingService.cosineSimilarity(emb1, emb2)
             weight += 0.65 * Double(similarity)
         }
-
+        
         return weight > 0.3 ? weight : nil
     }
     
@@ -174,6 +175,80 @@ class MovieGraph {
         }
         
         print("✅ Calculated filmmaking scores for \(nodes.count) movies")
+    }
+    
+    // MARK: - Calculate Animation Scores
+    
+    /// Calculate animation quality/style scores using embeddings and TMDb metadata
+    func calculateAnimationScores(preferenceEmbeddings: PreferenceEmbeddings) {
+        for (id, node) in nodes {
+            // Only compute animation scores for animated films
+            guard node.genreConnections.contains(animationGenreID) else { continue }
+            
+            var animQualityScore = node.animationQualityScore
+            var twoDScore = node.twoDAnimationScore
+            var threeDScore = node.threeDAnimationScore
+            var stopMotionScore = node.stopMotionScore
+            var animeScore = node.animeScore
+            var stylizedArtScore = node.stylizedArtScore
+            
+            if let movieEmbedding = node.textEmbedding {
+                if let qualityEmb = preferenceEmbeddings.animationQualityEmbedding {
+                    animQualityScore = max(animQualityScore, Double(EmbeddingService.cosineSimilarity(movieEmbedding, qualityEmb)) * 10.0)
+                }
+                if let twoDEmb = preferenceEmbeddings.twoDEmbedding {
+                    twoDScore = max(twoDScore, Double(EmbeddingService.cosineSimilarity(movieEmbedding, twoDEmb)) * 10.0)
+                }
+                if let threeDEmb = preferenceEmbeddings.threeDEmbedding {
+                    threeDScore = max(threeDScore, Double(EmbeddingService.cosineSimilarity(movieEmbedding, threeDEmb)) * 10.0)
+                }
+                if let stopMotionEmb = preferenceEmbeddings.stopMotionEmbedding {
+                    stopMotionScore = max(stopMotionScore, Double(EmbeddingService.cosineSimilarity(movieEmbedding, stopMotionEmb)) * 10.0)
+                }
+                if let animeEmb = preferenceEmbeddings.animeEmbedding {
+                    animeScore = max(animeScore, Double(EmbeddingService.cosineSimilarity(movieEmbedding, animeEmb)) * 10.0)
+                }
+                if let stylizedEmb = preferenceEmbeddings.stylizedArtEmbedding {
+                    stylizedArtScore = max(stylizedArtScore, Double(EmbeddingService.cosineSimilarity(movieEmbedding, stylizedEmb)) * 10.0)
+                }
+            }
+            
+            if node.genreConnections.contains(animationGenreID) {
+                animQualityScore += 2.5
+                twoDScore += 1.0
+                threeDScore += 1.0
+            }
+            
+            if let text = node.sourceText?.lowercased() {
+                if text.contains("stop-motion") || text.contains("stop motion") {
+                    stopMotionScore += 3.0
+                }
+                if text.contains("anime") {
+                    animeScore += 3.0
+                }
+                if text.contains("2d") || text.contains("hand-drawn") || text.contains("hand drawn") {
+                    twoDScore += 2.0
+                }
+                if text.contains("cgi") || text.contains("3d") || text.contains("computer generated") {
+                    threeDScore += 2.0
+                }
+                if text.contains("stylized") || text.contains("art style") || text.contains("painterly") {
+                    stylizedArtScore += 2.5
+                }
+                if text.contains("animation") {
+                    animQualityScore += 1.0
+                }
+            }
+            
+            nodes[id]?.animationQualityScore = animQualityScore
+            nodes[id]?.twoDAnimationScore = twoDScore
+            nodes[id]?.threeDAnimationScore = threeDScore
+            nodes[id]?.stopMotionScore = stopMotionScore
+            nodes[id]?.animeScore = animeScore
+            nodes[id]?.stylizedArtScore = stylizedArtScore
+        }
+        
+        print("✨ Calculated animation scores for animated films only")
     }
     
     // MARK: - User Ratings Integration
@@ -250,6 +325,46 @@ class MovieGraph {
         }
         
         print("🎬 Applied \(preferences.count) filmmaking preferences")
+    }
+    
+    // MARK: - Animation Preferences Integration
+    
+    /// Apply animation preferences using animation-specific quality/style scores
+    func applyAnimationPreferences(_ preferences: Set<AnimationPreferences>) {
+        guard !preferences.isEmpty else { return }
+        
+        for (id, node) in nodes {
+            // Only apply to animated films (animation genre present)
+            guard node.genreConnections.contains(animationGenreID) else { continue }
+            
+            var boost = 0.0
+            
+            for preference in preferences {
+                let score: Double
+                switch preference {
+                case .animationQuality:
+                    score = node.animationQualityScore
+                case .twoD:
+                    score = node.twoDAnimationScore
+                case .threeD:
+                    score = node.threeDAnimationScore
+                case .stopMotion:
+                    score = node.stopMotionScore
+                case .anime:
+                    score = node.animeScore
+                case .stylizedArt:
+                    score = node.stylizedArtScore
+                }
+                
+                if score >= 6.0 {
+                    boost += (score - 5.0) * 0.5
+                }
+            }
+            
+            nodes[id]?.graphScore += boost
+        }
+        
+        print("🎨 Applied \(preferences.count) animation preferences (animated films only)")
     }
     
     // MARK: - Query Interface
@@ -356,8 +471,6 @@ struct GraphStats {
     let totalConnections: Int
     let averageConnections: Double
     let genresIndexed: Int
-    
-
 }
 
 struct FilmmakingScoresSummary {

@@ -172,6 +172,7 @@ struct Home: View {
             movies = try await engine.getPersonalizedRecommendations(
                 selectedGenres: moviePreferences.selectedGenres,
                 selectedFilmmakingPreferences: moviePreferences.selectedFilmmakingPreferences,
+                selectedAnimationPreferences: moviePreferences.selectedAnimationPreferences,
                 page: 1
             )
         } catch {

@@ -47,6 +47,7 @@ class GraphRAGEngine {
         // Calculate filmmaking scores
         if let prefEmb = preferenceEmbeddings {
             graph.calculateFilmmakingScores(preferenceEmbeddings: prefEmb)
+            graph.calculateAnimationScores(preferenceEmbeddings: prefEmb)
         }
     }
     
@@ -60,6 +61,11 @@ class GraphRAGEngine {
     
     func applyFilmmakingPreferences(_ preferences: Set<FilmmakingPreferences>) {
         graph.applyFilmmakingPreferences(preferences)
+    }
+    
+    // MARK: - Apply Animation Preferences
+    func applyAnimationPreferences(_ preferences: Set<AnimationPreferences>) {
+        graph.applyAnimationPreferences(preferences)
     }
     
     // MARK: - Get Recommendations

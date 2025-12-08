@@ -24,6 +24,7 @@ class MovieRecommendationEngine {
     func getPersonalizedRecommendations(
         selectedGenres: Set<GenrePreferences>,
         selectedFilmmakingPreferences: Set<FilmmakingPreferences> = [],
+        selectedAnimationPreferences: Set<AnimationPreferences> = [],
         page: Int = 1
     ) async throws -> [TMDbMovie] {
         // If user hasn't selected any genres, return popular movies
@@ -58,9 +59,12 @@ class MovieRecommendationEngine {
             print("⭐ Applied \(userRatings.count) user ratings")
         }
         
-        // Step 6: Apply filmmaking preferences (embedding-based)
+        // Step 6: Apply movie preferences (embedding-based)
         if !selectedFilmmakingPreferences.isEmpty {
             graphRAG.applyFilmmakingPreferences(selectedFilmmakingPreferences)
+        }
+        if !selectedAnimationPreferences.isEmpty {
+            graphRAG.applyAnimationPreferences(selectedAnimationPreferences)
         }
         
         // Step 7: Get recommendations using GraphRAG
@@ -117,7 +121,7 @@ class MovieRecommendationEngine {
     // MARK: - Generate Movie Embeddings
     
     // MARK: - Generate Movie Embeddings (BATCH MODE - FAST!)
-
+    
     /// Generate embeddings for movies using batch processing
     private func generateMovieEmbeddings(
         for movies: [TMDbMovie]

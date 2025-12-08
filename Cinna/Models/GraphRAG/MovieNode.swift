@@ -24,6 +24,14 @@ struct MovieNode: Identifiable, Hashable {
     var writingScore: Double = 0.0
     var soundScore: Double = 0.0
     var visualEffectsScore: Double = 0.0
+    
+    //Animation quality scores
+    var animationQualityScore: Double = 0.0
+    var twoDAnimationScore: Double = 0.0
+    var threeDAnimationScore: Double = 0.0
+    var stopMotionScore: Double = 0.0
+    var animeScore: Double = 0.0
+    var stylizedArtScore: Double = 0.0
 
     init(movie: TMDbMovie) {
         self.movie = movie

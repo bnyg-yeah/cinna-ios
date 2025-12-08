@@ -15,34 +15,75 @@ struct PreferenceEmbeddings: Codable {
     var soundEmbedding: [Float]?
     var visualEffectsEmbedding: [Float]?
     
+    // Animation-related embeddings (added)
+    var animationQualityEmbedding: [Float]?
+    var twoDEmbedding: [Float]?
+    var threeDEmbedding: [Float]?
+    var stopMotionEmbedding: [Float]?
+    var animeEmbedding: [Float]?
+    var stylizedArtEmbedding: [Float]?
+    
     // Cache key for UserDefaults
     private static let cacheKey = "PreferenceEmbeddingsCache"
     
     // Reference texts for each filmmaking dimension
-    static let referenceTexts: [FilmmakingPreferences: String] = [
+    static let filmmakingReferenceTexts: [FilmmakingPreferences: String] = [
         .cinematography: """
         Stunning cinematography. Breathtaking visuals. Gorgeous shot composition. Beautiful lighting and color grading. Visually striking imagery. Masterful use of camera movement. Artistic framing and visual storytelling. Every frame is a painting. Stunning visual aesthetic. Breathtaking photography. Beautiful camera work. Visually impressive. Gorgeous visuals.
         """,
         
-        .acting: """
+            .acting: """
         Exceptional acting performances. Powerful and compelling performances. Outstanding cast. Oscar-worthy performances. Brilliant acting. Emotionally resonant performances. Masterful character portrayals. Captivating performances. Strong ensemble cast. Career-defining performances. Nuanced and layered acting. Transformative performances.
         """,
         
-        .directing: """
+            .directing: """
         Masterful direction. Visionary filmmaking. Brilliant directorial choices. Expert pacing and storytelling. Confident direction. Skilled craftsmanship. Auteur vision. Directorial excellence. Assured filmmaking. Innovative direction. Bold creative choices. Meticulous attention to detail.
         """,
         
-        .writing: """
+            .writing: """
         Brilliant screenplay. Sharp dialogue. Intelligent writing. Well-crafted story. Clever script. Witty and insightful writing. Compelling narrative. Strong character development. Thought-provoking themes. Excellent storytelling. Smart and engaging writing. Masterful plot construction.
         """,
         
-        .sound: """
+            .sound: """
         Immersive sound design. Powerful score. Excellent sound mixing. Atmospheric audio. Impactful soundtrack. Creative use of sound. Rich soundscape. Masterful audio design. Compelling musical score. Sound that enhances the story. Impressive audio work. Sonic excellence.
         """,
         
-        .visualEffects: """
+            .visualEffects: """
         Groundbreaking visual effects. Seamless CGI. Stunning VFX. Impressive special effects. Cutting-edge effects work. Photorealistic effects. Innovative visual effects. Spectacular effects. Masterful VFX integration. Believable effects. State-of-the-art visual effects. Award-worthy effects work.
         """
+    ]
+    
+    static let animationReferenceTexts: [AnimationPreferences: String] = [
+        .animationQuality: """
+            Breathtaking animation quality. Fluid motion, detailed frames, and polished visuals.
+            Beautifully animated sequences with exceptional craftsmanship and care.
+            Hand-crafted artistry that makes the world feel alive and immersive.
+            """,
+        .twoD: """
+            Traditional 2D animation with hand-drawn charm and expressive line work.
+            Flat-shaded color palettes, classic cartoon movement, and detailed backgrounds.
+            Frame-by-frame artistry reminiscent of hand-drawn animated films.
+            """,
+        .threeD: """
+            Modern 3D CGI animation with realistic lighting, depth, and texture.
+            Computer-generated visuals with polished models and detailed rendering.
+            Lifelike animation and immersive three-dimensional environments.
+            """,
+        .stopMotion: """
+            Stop-motion animation using practical models and tactile textures.
+            Physical miniature sets, handcrafted puppets, and frame-by-frame motion.
+            Distinctive stop-motion feel with visible craftsmanship.
+            """,
+        .anime: """
+            Anime-inspired visuals, stylized characters, and dynamic action.
+            Japanese animation sensibilities, expressive eyes, and energetic motion.
+            Themes and aesthetics common to anime storytelling and art.
+            """,
+        .stylizedArt: """
+            Highly stylized animation with bold artistic direction and unique palettes.
+            Painterly frames, experimental shading, and unconventional character designs.
+            Visually distinctive art styles that prioritize mood and creativity.
+            """
     ]
     
     // MARK: - Cache Management
@@ -74,7 +115,7 @@ struct PreferenceEmbeddings: Codable {
             .acting, .directing, .cinematography, .writing, .sound, .visualEffects
         ]
         
-        let texts = preferenceOrder.map { referenceTexts[$0]! }
+        let texts = preferenceOrder.map { filmmakingReferenceTexts[$0]! }
         let generatedEmbeddings = try await EmbeddingService.shared.batchGenerateEmbeddings(for: texts)
         
         // Map back to preferences
@@ -103,7 +144,29 @@ struct PreferenceEmbeddings: Codable {
             }
         }
         
-        print("✅ All preference embeddings generated\n")
+        // Generate animation embeddings as well so GraphRAG can score animation-focused users
+        for (preference, text) in animationReferenceTexts {
+            let embedding = try await EmbeddingService.shared.generateEmbedding(for: text)
+            
+            switch preference {
+            case .animationQuality:
+                embeddings.animationQualityEmbedding = embedding
+            case .twoD:
+                embeddings.twoDEmbedding = embedding
+            case .threeD:
+                embeddings.threeDEmbedding = embedding
+            case .stopMotion:
+                embeddings.stopMotionEmbedding = embedding
+            case .anime:
+                embeddings.animeEmbedding = embedding
+            case .stylizedArt:
+                embeddings.stylizedArtEmbedding = embedding
+            }
+            
+            print("  ✓ Generated \(preference.title) animation embedding")
+        }
+        
+        print("✅ All embeddings generated\n")
         return embeddings
     }
     
