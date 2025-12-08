@@ -179,18 +179,20 @@ class MovieRecommendationEngine {
         }
         
         do {
-            let startTime = Date()
+            // API latency & decode is logged inside EmbeddingService.
             let generatedEmbeddings = try await EmbeddingService.shared.batchGenerateEmbeddings(for: textsOnly)
-            let elapsed = Date().timeIntervalSince(startTime)
             
+            // Measure only the attach/mapping time (exclude API latency)
+            let attachStart = Date()
             // Map embeddings back to movie IDs
             for (index, (id, _)) in movieData.enumerated() {
                 if index < generatedEmbeddings.count {
                     embeddings[id] = generatedEmbeddings[index]
                 }
             }
+            let attachElapsed = Date().timeIntervalSince(attachStart)
             
-            print("✅ Generated \(embeddings.count)/\(movies.count) embeddings in \(String(format: "%.2f", elapsed))s")
+            print("✅ Attached \(embeddings.count)/\(movies.count) embeddings to movies in \(String(format: "%.2f", attachElapsed))s (excluding API latency)")
         } catch {
             print("❌ Batch embedding failed: \(error)")
         }
@@ -276,3 +278,4 @@ class MovieRecommendationEngine {
         graphRAG.reset()
     }
 }
+

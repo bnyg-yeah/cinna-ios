@@ -333,6 +333,8 @@ class MovieGraph {
     func applyAnimationPreferences(_ preferences: Set<AnimationPreferences>) {
         guard !preferences.isEmpty else { return }
         
+        var calculatedCount = 0
+        
         for (id, node) in nodes {
             // Only apply to animated films (animation genre present)
             guard node.genreConnections.contains(animationGenreID) else { continue }
@@ -362,9 +364,10 @@ class MovieGraph {
             }
             
             nodes[id]?.graphScore += boost
+            calculatedCount += 1
         }
         
-        print("🎨 Applied \(preferences.count) animation preferences (animated films only)")
+        print("🎨 Applied \(preferences.count) animation preferences to \(calculatedCount) animation films")
     }
     
     // MARK: - Query Interface
