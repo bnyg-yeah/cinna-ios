@@ -89,13 +89,13 @@
 		91EAF7272E85C97D009E1489 = {
 			isa = PBXGroup;
 			children = (
-				D2F8E67D2EE4C7420080E000 /* Secrets.xcconfig */,
 				91EAF7322E85C97D009E1489 /* Cinna */,
 				91EAF7402E85C97F009E1489 /* CinnaTests */,
 				91EAF74A2E85C97F009E1489 /* CinnaUITests */,
 				D2674E582E98978100FF84BD /* Cinna.app */,
 				D2674E592E98978100FF84BD /* CinnaTests.xctest */,
 				D2674E5A2E98978100FF84BD /* CinnaUITests.xctest */,
+				D2F8E67D2EE4C7420080E000 /* Secrets.xcconfig */,
 			);
 			sourceTree = "<group>";
 		};
