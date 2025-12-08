@@ -26,12 +26,13 @@ class GraphRAGEngine {
     ) async {
         cachedMovies = movies
         
-        // Generate preference embeddings (only once)
+        
+        // Load preference embeddings from cache (or generate if first time)
         if preferenceEmbeddings == nil {
             do {
-                preferenceEmbeddings = try await PreferenceEmbeddings.generate()
+                preferenceEmbeddings = try await PreferenceEmbeddings.loadOrGenerate()
             } catch {
-                print("❌ Failed to generate preference embeddings: \(error)")
+                print("❌ Failed to load preference embeddings: \(error)")
             }
         }
         
