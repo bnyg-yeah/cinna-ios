@@ -138,38 +138,49 @@ class MovieGraph {
     func calculateFilmmakingScores(preferenceEmbeddings: PreferenceEmbeddings) {
         self.preferenceEmbeddings = preferenceEmbeddings
         
+        var debugCount = 0
+        
         for (id, node) in nodes {
             guard let movieEmbedding = node.textEmbedding else { continue }
             
             // Calculate similarity to each preference dimension
             if let actingEmb = preferenceEmbeddings.actingEmbedding {
-                let score = EmbeddingService.cosineSimilarity(movieEmbedding, actingEmb)
-                nodes[id]?.actingScore = Double(score) * 10.0  // Scale to 0-10
+                let similarity = EmbeddingService.cosineSimilarity(movieEmbedding, actingEmb)
+                // Simple linear scaling: 0.0 → 0, 0.5 → 5.0, 1.0 → 10.0
+                nodes[id]?.actingScore = Double(similarity) * 10.0
             }
-            
+
             if let directingEmb = preferenceEmbeddings.directingEmbedding {
-                let score = EmbeddingService.cosineSimilarity(movieEmbedding, directingEmb)
-                nodes[id]?.directingScore = Double(score) * 10.0
+                let similarity = EmbeddingService.cosineSimilarity(movieEmbedding, directingEmb)
+                nodes[id]?.directingScore = Double(similarity) * 10.0
             }
-            
+
             if let cinematographyEmb = preferenceEmbeddings.cinematographyEmbedding {
-                let score = EmbeddingService.cosineSimilarity(movieEmbedding, cinematographyEmb)
-                nodes[id]?.cinematographyScore = Double(score) * 10.0
+                let similarity = EmbeddingService.cosineSimilarity(movieEmbedding, cinematographyEmb)
+                nodes[id]?.cinematographyScore = Double(similarity) * 10.0
+                
+                // DEBUG: Print first 5 movies
+                if debugCount < 5 {
+                    print("🔍 Movie: \(node.movie.title)")
+                    print("   Similarity: \(String(format: "%.3f", similarity))")
+                    print("   Score: \(String(format: "%.2f", Double(similarity) * 10.0))/10")
+                    debugCount += 1
+                }
             }
-            
+
             if let writingEmb = preferenceEmbeddings.writingEmbedding {
-                let score = EmbeddingService.cosineSimilarity(movieEmbedding, writingEmb)
-                nodes[id]?.writingScore = Double(score) * 10.0
+                let similarity = EmbeddingService.cosineSimilarity(movieEmbedding, writingEmb)
+                nodes[id]?.writingScore = Double(similarity) * 10.0
             }
-            
+
             if let soundEmb = preferenceEmbeddings.soundEmbedding {
-                let score = EmbeddingService.cosineSimilarity(movieEmbedding, soundEmb)
-                nodes[id]?.soundScore = Double(score) * 10.0
+                let similarity = EmbeddingService.cosineSimilarity(movieEmbedding, soundEmb)
+                nodes[id]?.soundScore = Double(similarity) * 10.0
             }
-            
+
             if let vfxEmb = preferenceEmbeddings.visualEffectsEmbedding {
-                let score = EmbeddingService.cosineSimilarity(movieEmbedding, vfxEmb)
-                nodes[id]?.visualEffectsScore = Double(score) * 10.0
+                let similarity = EmbeddingService.cosineSimilarity(movieEmbedding, vfxEmb)
+                nodes[id]?.visualEffectsScore = Double(similarity) * 10.0
             }
         }
         
@@ -220,33 +231,70 @@ class MovieGraph {
     func applyFilmmakingPreferences(_ preferences: Set<FilmmakingPreferences>) {
         guard !preferences.isEmpty else { return }
         
+        // Calculate average score for each preference to use as baseline
+        var avgScores: [FilmmakingPreferences: Double] = [:]
+        for preference in preferences {
+            var total = 0.0
+            var count = 0
+            for node in nodes.values {
+                let score: Double
+                switch preference {
+                case .acting: score = node.actingScore
+                case .directing: score = node.directingScore
+                case .cinematography: score = node.cinematographyScore
+                case .writing: score = node.writingScore
+                case .sound: score = node.soundScore
+                case .visualEffects: score = node.visualEffectsScore
+                }
+                total += score
+                count += 1
+            }
+            avgScores[preference] = total / Double(max(count, 1))
+        }
+        
+        // Track which movies got boosted
+        var boostedMovies: [(title: String, score: Double, boost: Double)] = []
+        
         for (id, node) in nodes {
             var boost = 0.0
             
             for preference in preferences {
                 let score: Double
                 switch preference {
-                case .acting:
-                    score = node.actingScore
-                case .directing:
-                    score = node.directingScore
-                case .cinematography:
-                    score = node.cinematographyScore
-                case .writing:
-                    score = node.writingScore
-                case .sound:
-                    score = node.soundScore
-                case .visualEffects:
-                    score = node.visualEffectsScore
+                case .acting: score = node.actingScore
+                case .directing: score = node.directingScore
+                case .cinematography: score = node.cinematographyScore
+                case .writing: score = node.writingScore
+                case .sound: score = node.soundScore
+                case .visualEffects: score = node.visualEffectsScore
                 }
                 
-                // Boost movies with high scores in selected dimensions
-                if score >= 6.0 {
-                    boost += (score - 5.0) * 0.5
+                let avg = avgScores[preference] ?? 0
+                
+                // Boost movies that score above average
+                if score > avg {
+                    let individualBoost = (score - avg) * 2.0  // 2x multiplier for above-average
+                    boost += individualBoost
+                    
+                    // Track for debugging
+                    if preference == .cinematography {
+                        boostedMovies.append((node.movie.title, score, individualBoost))
+                    }
                 }
             }
             
             nodes[id]?.graphScore += boost
+        }
+        
+        // Print top 10 boosted movies for cinematography
+        if preferences.contains(.cinematography) {
+            let avg = avgScores[.cinematography] ?? 0
+            boostedMovies.sort { $0.score > $1.score }
+            print("📊 CINEMATOGRAPHY SCORES (Average: \(String(format: "%.2f", avg))):")
+            for (index, movie) in boostedMovies.prefix(10).enumerated() {
+                print("  \(index + 1). \(movie.title): \(String(format: "%.2f", movie.score))/10 (boost: +\(String(format: "%.2f", movie.boost)))")
+            }
+            print("📊 Total movies boosted: \(boostedMovies.count)")
         }
         
         print("🎬 Applied \(preferences.count) filmmaking preferences")
