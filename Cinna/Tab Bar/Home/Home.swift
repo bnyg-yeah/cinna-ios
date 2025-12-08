@@ -12,51 +12,87 @@ struct Home: View {
     @State private var movies: [TMDbMovie] = []
     @State private var isLoading = true
     @State private var errorMessage: String?
+    @State private var loadingProgress: Double = 0.0
+    @State private var lastLoadedPreferences: (genres: Set<GenrePreferences>, filmmaking: Set<FilmmakingPreferences>)?
 
     var body: some View {
         NavigationStack {
-            Group {
-                if isLoading {
-                    ProgressView("Loading movies…")
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                        .padding(.top, 40)
-                } else if let errorMessage {
-                    ErrorStateView(message: errorMessage) {
-                        Task { await loadMovies() }
-                    }
-                    .padding(.horizontal, 24)
-                } else if movies.isEmpty {
-                    EmptyStateView(title: "No movies found", systemImage: "film.stack")
-                        .padding(.horizontal, 24)
-                } else {
-                    ScrollView {
-                        VStack(alignment: .center, spacing: 12) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text("Recommended Movies")
-                                    .font(.title.bold())
-                                    .foregroundStyle(.white)
-
-                                if !moviePreferences.selectedGenres.isEmpty {
-                                    Text("Based on: \(moviePreferences.sortedSelectedGenresString)")
-                                        .font(.subheadline)
-                                        .foregroundStyle(.white.opacity(0.8))
-                                }
-                            }
-
-                            VStack(spacing: 16) {
-                                ForEach(movies) { movie in
-                                    NavigationLink(value: movie) {
-                                        MovieCard(movie: movie)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
+            ZStack {
+                Group {
+                    if isLoading {
+                        Color.clear
+                    } else if let errorMessage {
+                        ErrorStateView(message: errorMessage) {
+                            Task { await loadMovies() }
                         }
-                        .padding(.horizontal, 20)
+                        .padding(.horizontal, 24)
+                    } else if movies.isEmpty {
+                        EmptyStateView(title: "No movies found", systemImage: "film.stack")
+                            .padding(.horizontal, 24)
+                    } else {
+                        ScrollView {
+                            VStack(alignment: .center, spacing: 12) {
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text("Recommended Movies")
+                                        .font(.title.bold())
+                                        .foregroundStyle(.white)
+
+                                    if !moviePreferences.selectedGenres.isEmpty {
+                                        Text("Based on: \(moviePreferences.sortedSelectedGenresString)")
+                                            .font(.subheadline)
+                                            .foregroundStyle(.white.opacity(0.8))
+                                    }
+                                }
+
+                                VStack(spacing: 16) {
+                                    ForEach(movies) { movie in
+                                        NavigationLink(value: movie) {
+                                            MovieCard(movie: movie)
+                                        }
+                                        .buttonStyle(.plain)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                        }
                     }
                 }
+                .background(BackgroundView())
+                
+                // Loading overlay with progress bar
+                if isLoading {
+                    Color.black.opacity(0.6)
+                        .ignoresSafeArea()
+                    
+                    VStack(spacing: 24) {
+                        Image(systemName: "popcorn.fill")
+                            .font(.system(size: 50))
+                            .foregroundColor(.white)
+                        
+                        Text("Finding perfect movies...")
+                            .foregroundColor(.white)
+                            .font(.headline)
+                        
+                        // Progress bar
+                        VStack(spacing: 8) {
+                            ProgressView(value: loadingProgress, total: 1.0)
+                                .progressViewStyle(LinearProgressViewStyle(tint: .white))
+                                .frame(width: 200)
+                            
+                            Text("\(Int(loadingProgress * 100))%")
+                                .foregroundColor(.white.opacity(0.8))
+                                .font(.subheadline)
+                                .monospacedDigit()
+                        }
+                    }
+                    .padding(40)
+                    .background(
+                        RoundedRectangle(cornerRadius: 20)
+                            .fill(Color.black.opacity(0.85))
+                    )
+                    .shadow(radius: 20)
+                }
             }
-            .background(BackgroundView())
             .navigationDestination(for: TMDbMovie.self) { movie in
                 MovieDetailView(movie: movie)
             }
@@ -70,8 +106,31 @@ struct Home: View {
     // MARK: - Load
 
     private func loadMovies() async {
+        // Check if preferences have changed
+        let currentPreferences = (moviePreferences.selectedGenres, moviePreferences.selectedFilmmakingPreferences)
+        
+        if let last = lastLoadedPreferences,
+           last.genres == currentPreferences.0,
+           last.filmmaking == currentPreferences.1,
+           !movies.isEmpty {
+            // Preferences unchanged and we have movies - skip reload
+            return
+        }
+        
         isLoading = true
+        loadingProgress = 0.0
         errorMessage = nil
+        
+        // Simulate progress
+        Task {
+            for i in 1...20 {
+                if isLoading {
+                    loadingProgress = Double(i) / 20.0
+                    try? await Task.sleep(nanoseconds: 250_000_000)
+                }
+            }
+        }
+        
         do {
             // Use your existing engine as-is
             let engine = MovieRecommendationEngine.shared
@@ -80,6 +139,8 @@ struct Home: View {
                 selectedFilmmakingPreferences: moviePreferences.selectedFilmmakingPreferences,
                 page: 1
             )
+            loadingProgress = 1.0
+            lastLoadedPreferences = currentPreferences  // Save current preferences
         } catch {
             errorMessage = "Failed to load movies. Please try again."
             #if DEBUG

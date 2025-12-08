@@ -35,7 +35,7 @@ class MovieRecommendationEngine {
         let genreIDs = selectedGenres.map { $0.tmdbID }
         
         // Step 1: Fetch movies from TMDb (get more for better graph)
-        let fetchedMovies = try await fetchMoviesForGraph(genreIDs: genreIDs, pages: 2)
+        let fetchedMovies = try await fetchMoviesForGraph(genreIDs: genreIDs, pages: 1)
         
         // Step 2: Build genre mapping (which genres each movie has)
         let genreMapping = await fetchGenreMappings(for: fetchedMovies)
