@@ -36,7 +36,7 @@ struct ReadyView: View {
             Button {
                 finish()
             } label: {
-                Text("Go to Home")
+                Text("Let's Go!")
                     .font(.title3.weight(.semibold))
             }
             .buttonStyle(.glassProminent)
