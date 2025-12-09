@@ -27,62 +27,51 @@ struct PreferenceEmbeddings: Codable {
     private static let cacheKey = "PreferenceEmbeddingsCache"
     
     // Reference texts for each filmmaking dimension
+    // Concise, distinctive, and embedding-friendly phrasing to reduce overlap between dimensions.
     static let filmmakingReferenceTexts: [FilmmakingPreferences: String] = [
         .cinematography: """
-        Stunning cinematography. Breathtaking visuals. Gorgeous shot composition. Beautiful lighting and color grading. Visually striking imagery. Masterful use of camera movement. Artistic framing and visual storytelling. Every frame is a painting. Stunning visual aesthetic. Breathtaking photography. Beautiful camera work. Visually impressive. Gorgeous visuals.
+        Emphasis on visual storytelling and composition. Precise framing, dynamic camera movement, and expressive lenses. Beautiful lighting and color grading that shape mood and theme. Texture, depth, and contrast are used purposefully. Every shot feels intentional and painterly, with strong visual continuity.
         """,
         
-            .acting: """
-        Exceptional acting performances. Powerful and compelling performances. Outstanding cast. Oscar-worthy performances. Brilliant acting. Emotionally resonant performances. Masterful character portrayals. Captivating performances. Strong ensemble cast. Career-defining performances. Nuanced and layered acting. Transformative performances.
+        .acting: """
+        Nuanced, believable performances that reveal character through behavior and subtext. Emotional range, timing, and chemistry elevate scenes. Physicality and voice reflect internal change. Ensemble balance supports character arcs without showiness. Performances feel lived-in rather than theatrical.
         """,
         
-            .directing: """
-        Masterful direction. Visionary filmmaking. Brilliant directorial choices. Expert pacing and storytelling. Confident direction. Skilled craftsmanship. Auteur vision. Directorial excellence. Assured filmmaking. Innovative direction. Bold creative choices. Meticulous attention to detail.
+        .directing: """
+        Clear authorial vision guiding tone, pace, and staging. Confident blocking, rhythm, and transitions unify the film. Strong control over performances, visual language, and narrative focus. Choices feel intentional and cohesive, shaping audience attention and emotion from scene to scene.
         """,
         
-            .writing: """
-        Brilliant screenplay. Sharp dialogue. Intelligent writing. Well-crafted story. Clever script. Witty and insightful writing. Compelling narrative. Strong character development. Thought-provoking themes. Excellent storytelling. Smart and engaging writing. Masterful plot construction.
+        .writing: """
+        Thoughtful screenplay structure with purposeful scenes and clean causality. Dialogue reveals character and subtext. Themes emerge through action and conflict. Character arcs are motivated and coherent. The plot balances setup and payoff without relying on exposition or coincidence.
         """,
         
-            .sound: """
-        Immersive sound design. Powerful score. Excellent sound mixing. Atmospheric audio. Impactful soundtrack. Creative use of sound. Rich soundscape. Masterful audio design. Compelling musical score. Sound that enhances the story. Impressive audio work. Sonic excellence.
+        .sound: """
+        Immersive sound design and purposeful mixing. Spatial detail, dynamics, and silence are used expressively. The score supports tone and rhythm without overwhelming. Foley and ambience enhance texture and world-building. Audio cues guide attention and emotional beats with clarity.
         """,
         
-            .visualEffects: """
-        Groundbreaking visual effects. Seamless CGI. Stunning VFX. Impressive special effects. Cutting-edge effects work. Photorealistic effects. Innovative visual effects. Spectacular effects. Masterful VFX integration. Believable effects. State-of-the-art visual effects. Award-worthy effects work.
+        .visualEffects: """
+        Seamless visual effects integrated into the cinematography and lighting. VFX support story and world-building without distraction. Scale, simulation, and compositing feel grounded and consistent. Effects enhance scope and plausibility rather than drawing attention to technique.
         """
     ]
     
     static let animationReferenceTexts: [AnimationPreferences: String] = [
         .animationQuality: """
-            Breathtaking animation quality. Fluid motion, detailed frames, and polished visuals.
-            Beautifully animated sequences with exceptional craftsmanship and care.
-            Hand-crafted artistry that makes the world feel alive and immersive.
+            High-fidelity animation with fluid motion, consistent character volumes, and polished timing. Clear staging and expressive posing. Visual cohesion across sequences reflects craftsmanship and care.
             """,
         .twoD: """
-            Traditional 2D animation with hand-drawn charm and expressive line work.
-            Flat-shaded color palettes, classic cartoon movement, and detailed backgrounds.
-            Frame-by-frame artistry reminiscent of hand-drawn animated films.
+            Traditional 2D animation with expressive line work and hand-drawn sensibility. Strong silhouettes, squash and stretch, and illustrative backgrounds. Frame-by-frame charm and stylized motion.
             """,
         .threeD: """
-            Modern 3D CGI animation with realistic lighting, depth, and texture.
-            Computer-generated visuals with polished models and detailed rendering.
-            Lifelike animation and immersive three-dimensional environments.
+            Modern 3D CGI with physically plausible lighting, texture, and depth. Clean rigging, natural motion, and cohesive rendering. Believable materials and environments enhance immersion.
             """,
         .stopMotion: """
-            Stop-motion animation using practical models and tactile textures.
-            Physical miniature sets, handcrafted puppets, and frame-by-frame motion.
-            Distinctive stop-motion feel with visible craftsmanship.
+            Tactile stop-motion with handcrafted models and miniature sets. Physical textures, subtle imperfections, and frame-by-frame motion convey charm. Practical lighting and depth emphasize materiality.
             """,
         .anime: """
-            Anime-inspired visuals, stylized characters, and dynamic action.
-            Japanese animation sensibilities, expressive eyes, and energetic motion.
-            Themes and aesthetics common to anime storytelling and art.
+            Anime-inspired style with stylized character design, kinetic action, and expressive timing. Bold compositions, limited animation used purposefully, and heightened emotion through framing and music.
             """,
         .stylizedArt: """
-            Highly stylized animation with bold artistic direction and unique palettes.
-            Painterly frames, experimental shading, and unconventional character designs.
-            Visually distinctive art styles that prioritize mood and creativity.
+            Bold, stylized visual direction with distinctive palettes and shapes. Painterly textures, experimental shading, or mixed-media techniques. Art direction prioritizes mood, abstraction, and creativity.
             """
     ]
     

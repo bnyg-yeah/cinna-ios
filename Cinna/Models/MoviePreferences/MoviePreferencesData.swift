@@ -91,10 +91,6 @@ final class MoviePreferencesData: ObservableObject {
     
     //MARK: Studio and Production Companies - disney, universal, warner bros, pixar, illumination
     
-    //MARK: Directors and Creators -  specific directors, showrunners, writers
-    
-    //MARK: Cast - specific actors and voice actors
-    
     //MARK: Universes - marvel, star wars, harry potter, breaking bad
     
     //MARK: Themes and Topics and Mood - subject matter, tropes, tone, thought-provoking (heist, coming of age, feel good, villainous)
