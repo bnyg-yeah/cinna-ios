@@ -251,6 +251,77 @@ class MovieGraph {
         print("✨ Calculated animation scores for animated films only")
     }
     
+    func calculateStudioScores(preferenceEmbeddings: PreferenceEmbeddings) {
+        for (id, node) in nodes {
+            guard let movieEmbedding = node.textEmbedding else { continue }
+            
+            if let disneyEmbedding = preferenceEmbeddings.disneyEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, disneyEmbedding)
+                nodes[id]?.disneyScore = Double(score) * 10.0
+            }
+            if let universalEmbedding = preferenceEmbeddings.universalEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, universalEmbedding)
+                nodes[id]?.universalScore = Double(score) * 10.0
+            }
+            if let warnerBrosEmbedding = preferenceEmbeddings.warnerBrosEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, warnerBrosEmbedding)
+                nodes[id]?.warnerBrosScore = Double(score) * 10.0
+            }
+            if let pixarEmbedding = preferenceEmbeddings.pixarEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, pixarEmbedding)
+                nodes[id]?.pixarScore = Double(score) * 10.0
+            }
+            if let illuminationEmbedding = preferenceEmbeddings.illuminationEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, illuminationEmbedding)
+                nodes[id]?.illuminationScore = Double(score) * 10.0
+            }
+            if let marvelEmbedding = preferenceEmbeddings.marvelEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, marvelEmbedding)
+                nodes[id]?.marvelScore = Double(score) * 10.0
+            }
+        }
+        
+        print("🏢 Calculated studio scores for \(nodes.count) movies")
+    }
+
+    func calculateThemeScores(preferenceEmbeddings: PreferenceEmbeddings) {
+        for (id, node) in nodes {
+            guard let movieEmbedding = node.textEmbedding else { continue }
+            
+            if let emb = preferenceEmbeddings.lightheartedThemeEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, emb)
+                nodes[id]?.lightheartedThemeScore = Double(score) * 10.0
+            }
+            if let emb = preferenceEmbeddings.darkThemeEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, emb)
+                nodes[id]?.darkThemeScore = Double(score) * 10.0
+            }
+            if let emb = preferenceEmbeddings.emotionalThemeEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, emb)
+                nodes[id]?.emotionalThemeScore = Double(score) * 10.0
+            }
+            if let emb = preferenceEmbeddings.comingOfAgeThemeEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, emb)
+                nodes[id]?.comingOfAgeThemeScore = Double(score) * 10.0
+            }
+            if let emb = preferenceEmbeddings.survivalThemeEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, emb)
+                nodes[id]?.survivalThemeScore = Double(score) * 10.0
+            }
+            if let emb = preferenceEmbeddings.relaxingThemeEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, emb)
+                nodes[id]?.relaxingThemeScore = Double(score) * 10.0
+            }
+            if let emb = preferenceEmbeddings.learningThemeEmbedding {
+                let score = EmbeddingService.cosineSimilarity(movieEmbedding, emb)
+                nodes[id]?.learningThemeScore = Double(score) * 10.0
+            }
+        }
+        
+        print("🎭 Calculated theme scores for \(nodes.count) movies")
+    }
+
+    
     // MARK: - User Ratings Integration
     
     /// Apply user ratings to boost graph scores (1-4 star scale)
@@ -289,7 +360,7 @@ class MovieGraph {
         print("⭐ Applied \(ratings.count) user ratings to graph")
     }
     
-    // MARK: - Filmmaking Preferences Integration
+    // MARK: Preferences Integration
     
     /// Apply filmmaking preferences using embedding-based quality scores
     func applyFilmmakingPreferences(_ preferences: Set<FilmmakingPreferences>) {
@@ -326,8 +397,6 @@ class MovieGraph {
         
         print("🎬 Applied \(preferences.count) filmmaking preferences")
     }
-    
-    // MARK: - Animation Preferences Integration
     
     /// Apply animation preferences using animation-specific quality/style scores
     func applyAnimationPreferences(_ preferences: Set<AnimationPreferences>) {
@@ -369,6 +438,77 @@ class MovieGraph {
         
         print("🎨 Applied \(preferences.count) animation preferences to \(calculatedCount) animation films")
     }
+    
+    func applyStudioPreferences(_ preferences: Set<StudioPreferences>) {
+        guard !preferences.isEmpty else { return }
+        
+        for (id, node) in nodes {
+            var boost = 0.0
+            
+            for preference in preferences {
+                let score: Double
+                switch preference {
+                case .Disney:
+                    score = node.disneyScore
+                case .Universal:
+                    score = node.universalScore
+                case .WarnerBros:
+                    score = node.warnerBrosScore
+                case .Pixar:
+                    score = node.pixarScore
+                case .Illumination:
+                    score = node.illuminationScore
+                case .Marvel:
+                    score = node.marvelScore
+                }
+                
+                if score >= 6.0 {
+                    boost += (score - 5.0) * 0.5
+                }
+            }
+            
+            nodes[id]?.graphScore += boost
+        }
+        
+        print("🏢 Applied \(preferences.count) studio preferences")
+    }
+
+    func applyThemePreferences(_ preferences: Set<ThemePreferences>) {
+        guard !preferences.isEmpty else { return }
+        
+        for (id, node) in nodes {
+            var boost = 0.0
+            
+            for preference in preferences {
+                let score: Double
+                switch preference {
+                case .Lighthearted:
+                    score = node.lightheartedThemeScore
+                case .Dark:
+                    score = node.darkThemeScore
+                case .Emotional:
+                    score = node.emotionalThemeScore
+                case .ComingOfAge:
+                    score = node.comingOfAgeThemeScore
+                case .Survival:
+                    score = node.survivalThemeScore
+                case .Relaxing:
+                    score = node.relaxingThemeScore
+                case .Learning:
+                    score = node.learningThemeScore
+                }
+                
+                if score >= 6.0 {
+                    boost += (score - 5.0) * 0.5
+                }
+            }
+            
+            nodes[id]?.graphScore += boost
+        }
+        
+        print("🎭 Applied \(preferences.count) theme preferences")
+    }
+
     
     // MARK: - Query Interface
     

@@ -32,6 +32,24 @@ struct MovieNode: Identifiable, Hashable {
     var stopMotionScore: Double = 0.0
     var animeScore: Double = 0.0
     var stylizedArtScore: Double = 0.0
+    
+    // Studio scores
+    var disneyScore: Double = 0.0
+    var universalScore: Double = 0.0
+    var warnerBrosScore: Double = 0.0
+    var pixarScore: Double = 0.0
+    var illuminationScore: Double = 0.0
+    var marvelScore: Double = 0.0
+
+    // Theme scores
+    var lightheartedThemeScore: Double = 0.0
+    var darkThemeScore: Double = 0.0
+    var emotionalThemeScore: Double = 0.0
+    var comingOfAgeThemeScore: Double = 0.0
+    var survivalThemeScore: Double = 0.0
+    var relaxingThemeScore: Double = 0.0
+    var learningThemeScore: Double = 0.0
+
 
     init(movie: TMDbMovie) {
         self.movie = movie

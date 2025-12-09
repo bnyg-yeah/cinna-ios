@@ -27,8 +27,11 @@ enum ThemePreferences: String, CaseIterable, Identifiable, Hashable {
         case .Emotional: return "Emotional"
         case .ComingOfAge: return "Coming of Age"
         case .Survival: return "Survival"
+        case .Relaxing: return "Relaxing"
+        case .Learning: return "Learning"
         }
     }
+
 
     var symbol: String {
         switch self {
@@ -37,6 +40,9 @@ enum ThemePreferences: String, CaseIterable, Identifiable, Hashable {
         case .Emotional: return "face.smiling.inverse"
         case .ComingOfAge: return "figure.walk"
         case .Survival: return "leaf.fill"
+        case .Relaxing: return "cloud.fill"
+        case .Learning: return "book.fill"
         }
     }
+    
 }

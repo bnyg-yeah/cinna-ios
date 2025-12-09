@@ -25,6 +25,8 @@ class MovieRecommendationEngine {
         selectedGenres: Set<GenrePreferences>,
         selectedFilmmakingPreferences: Set<FilmmakingPreferences> = [],
         selectedAnimationPreferences: Set<AnimationPreferences> = [],
+        selectedStudioPreferences: Set<StudioPreferences> = [],
+        selectedThemePreferences: Set<ThemePreferences> = [],
         page: Int = 1
     ) async throws -> [TMDbMovie] {
         // If user hasn't selected any genres, return popular movies
@@ -66,6 +68,13 @@ class MovieRecommendationEngine {
         if !selectedAnimationPreferences.isEmpty {
             graphRAG.applyAnimationPreferences(selectedAnimationPreferences)
         }
+        if !selectedStudioPreferences.isEmpty {
+            graphRAG.applyStudioPreferences(selectedStudioPreferences)
+        }
+        if !selectedThemePreferences.isEmpty {
+            graphRAG.applyThemePreferences(selectedThemePreferences)
+        }
+
         
         // Step 7: Get recommendations using GraphRAG
         if useGraphRAG && graphRAG.isReady() {

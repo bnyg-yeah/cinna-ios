@@ -8,6 +8,7 @@
 import Foundation
 
 struct PreferenceEmbeddings: Codable {
+    // Filmmaking embeddings
     var cinematographyEmbedding: [Float]?
     var actingEmbedding: [Float]?
     var directingEmbedding: [Float]?
@@ -15,13 +16,31 @@ struct PreferenceEmbeddings: Codable {
     var soundEmbedding: [Float]?
     var visualEffectsEmbedding: [Float]?
     
-    // Animation-related embeddings (added)
+    // Animation embeddings
     var animationQualityEmbedding: [Float]?
     var twoDEmbedding: [Float]?
     var threeDEmbedding: [Float]?
     var stopMotionEmbedding: [Float]?
     var animeEmbedding: [Float]?
     var stylizedArtEmbedding: [Float]?
+    
+    // Studio embeddings
+    var disneyEmbedding: [Float]?
+    var universalEmbedding: [Float]?
+    var warnerBrosEmbedding: [Float]?
+    var pixarEmbedding: [Float]?
+    var illuminationEmbedding: [Float]?
+    var marvelEmbedding: [Float]?
+
+    // Theme embeddings
+    var lightheartedThemeEmbedding: [Float]?
+    var darkThemeEmbedding: [Float]?
+    var emotionalThemeEmbedding: [Float]?
+    var comingOfAgeThemeEmbedding: [Float]?
+    var survivalThemeEmbedding: [Float]?
+    var relaxingThemeEmbedding: [Float]?
+    var learningThemeEmbedding: [Float]?
+
     
     // Cache key for UserDefaults
     private static let cacheKey = "PreferenceEmbeddingsCache"
@@ -75,6 +94,52 @@ struct PreferenceEmbeddings: Codable {
             """
     ]
     
+    static let studioReferenceTexts: [StudioPreferences: String] = [
+        .Disney: """
+        Warm, family oriented storytelling with emotional sincerity, musical elements, and optimistic themes. Wholesome tone, colorful worlds, and heartfelt character arcs.
+        """,
+        .Pixar: """
+        Emotionally rich character driven stories with clever humor, visually polished animation, and thoughtful themes. Focus on heart, creativity, and narrative depth.
+        """,
+        .Illumination: """
+        Light, comedic, fast paced family movies with simple plots, bright visuals, and slapstick humor. Accessible tone and humorous characters.
+        """,
+        .WarnerBros: """
+        Wide range of films from prestige drama to large scale genre projects with emphasis on spectacle, atmosphere, and strong world building.
+        """,
+        .Universal: """
+        Genre diverse commercial films including adventure, comedy, horror, and family content. Mainstream accessible storytelling aimed at broad audiences.
+        """,
+        .Marvel: """
+        Superhero focused action with an interconnected universe, ensemble casts, humor, high stakes conflicts, and recurring character arcs across films.
+        """
+    ]
+
+    static let themeReferenceTexts: [ThemePreferences: String] = [
+        .Lighthearted: """
+        Warm, humorous, and uplifting tone with accessible conflicts, gentle stakes, and positive energy. Focus on fun, charm, and feel good moments.
+        """,
+        .Dark: """
+        Grim or somber tone with moral ambiguity, tension, heavier subject matter, and intense atmosphere. Often explores difficult choices and consequences.
+        """,
+        .Emotional: """
+        Deep character drama with heartfelt moments, vulnerability, and introspection. Strong emotional arcs and scenes designed to move the audience.
+        """,
+        .ComingOfAge: """
+        Stories of growth and self discovery focused on youth, identity, relationships, and life lessons. Follows characters through formative transitions.
+        """,
+        .Survival: """
+        High stakes endurance against danger or harsh conditions. Emphasis on resilience, resourcefulness, and the struggle to stay alive or protect others.
+        """,
+        .Relaxing: """
+        Calm pacing, gentle tone, soothing visuals or music, and low stakes. Designed to be comforting, cozy, and easy to watch without stress.
+        """,
+        .Learning: """
+        Informative or idea driven storytelling with educational value. Explores concepts, history, science, or social issues in a clear and engaging way.
+        """
+    ]
+
+    
     // MARK: - Cache Management
     
     /// Load from cache or generate if needed
@@ -95,11 +160,10 @@ struct PreferenceEmbeddings: Codable {
         return embeddings
     }
     
-    /// Generate embeddings for all preferences (BATCH MODE - FAST!)
+    // MARK: Generate preference embeddings
     private static func generate() async throws -> PreferenceEmbeddings {
         var embeddings = PreferenceEmbeddings()
         
-        // Batch generate all preference embeddings in ONE request
         let preferenceOrder: [FilmmakingPreferences] = [
             .acting, .directing, .cinematography, .writing, .sound, .visualEffects
         ]
@@ -107,7 +171,6 @@ struct PreferenceEmbeddings: Codable {
         let texts = preferenceOrder.map { filmmakingReferenceTexts[$0]! }
         let generatedEmbeddings = try await EmbeddingService.shared.batchGenerateEmbeddings(for: texts)
         
-        // Map back to preferences
         for (index, preference) in preferenceOrder.enumerated() {
             if index < generatedEmbeddings.count {
                 switch preference {
@@ -129,6 +192,75 @@ struct PreferenceEmbeddings: Codable {
                 case .visualEffects:
                     embeddings.visualEffectsEmbedding = generatedEmbeddings[index]
                     print("  ✓ Generated Visual Effects embedding")
+                }
+            }
+        }
+
+        let studioOrder: [StudioPreferences] = [
+            .Disney, .Pixar, .Illumination, .WarnerBros, .Universal, .Marvel
+        ]
+        let studioTexts = studioOrder.compactMap { studioReferenceTexts[$0] }
+        if !studioTexts.isEmpty {
+            let studioEmbeddings = try await EmbeddingService.shared.batchGenerateEmbeddings(for: studioTexts)
+            for (index, studio) in studioOrder.enumerated() {
+                if index < studioEmbeddings.count {
+                    let vector = studioEmbeddings[index]
+                    switch studio {
+                    case .Disney:
+                        embeddings.disneyEmbedding = vector
+                        print("  ✓ Generated Disney embedding")
+                    case .Pixar:
+                        embeddings.pixarEmbedding = vector
+                        print("  ✓ Generated Pixar embedding")
+                    case .Illumination:
+                        embeddings.illuminationEmbedding = vector
+                        print("  ✓ Generated Illumination embedding")
+                    case .WarnerBros:
+                        embeddings.warnerBrosEmbedding = vector
+                        print("  ✓ Generated Warner Bros embedding")
+                    case .Universal:
+                        embeddings.universalEmbedding = vector
+                        print("  ✓ Generated Universal embedding")
+                    case .Marvel:
+                        embeddings.marvelEmbedding = vector
+                        print("  ✓ Generated Marvel embedding")
+                    }
+                }
+            }
+        }
+
+        let themeOrder: [ThemePreferences] = [
+            .Lighthearted, .Dark, .Emotional, .ComingOfAge, .Survival, .Relaxing, .Learning
+        ]
+        let themeTexts = themeOrder.compactMap { themeReferenceTexts[$0] }
+        if !themeTexts.isEmpty {
+            let themeEmbeddings = try await EmbeddingService.shared.batchGenerateEmbeddings(for: themeTexts)
+            for (index, theme) in themeOrder.enumerated() {
+                if index < themeEmbeddings.count {
+                    let vector = themeEmbeddings[index]
+                    switch theme {
+                    case .Lighthearted:
+                        embeddings.lightheartedThemeEmbedding = vector
+                        print("  ✓ Generated Lighthearted theme embedding")
+                    case .Dark:
+                        embeddings.darkThemeEmbedding = vector
+                        print("  ✓ Generated Dark theme embedding")
+                    case .Emotional:
+                        embeddings.emotionalThemeEmbedding = vector
+                        print("  ✓ Generated Emotional theme embedding")
+                    case .ComingOfAge:
+                        embeddings.comingOfAgeThemeEmbedding = vector
+                        print("  ✓ Generated Coming of Age theme embedding")
+                    case .Survival:
+                        embeddings.survivalThemeEmbedding = vector
+                        print("  ✓ Generated Survival theme embedding")
+                    case .Relaxing:
+                        embeddings.relaxingThemeEmbedding = vector
+                        print("  ✓ Generated Relaxing theme embedding")
+                    case .Learning:
+                        embeddings.learningThemeEmbedding = vector
+                        print("  ✓ Generated Learning theme embedding")
+                    }
                 }
             }
         }
@@ -158,6 +290,7 @@ struct PreferenceEmbeddings: Codable {
         print("✅ All embeddings generated\n")
         return embeddings
     }
+
     
     /// Save to UserDefaults cache
     private static func saveToCache(_ embeddings: PreferenceEmbeddings) {

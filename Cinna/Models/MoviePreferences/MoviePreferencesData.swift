@@ -34,7 +34,7 @@ final class MoviePreferencesData: ObservableObject {
         }
     }
     
-    //MARK: Animation Quality - Style, Animation quality, style
+    // MARK: Animation - Quality/Style
     @Published var selectedAnimationPreferences: Set<AnimationPreferences> {
         didSet {
             let rawValues = selectedAnimationPreferences.map(\.rawValue).sorted()
@@ -58,7 +58,7 @@ final class MoviePreferencesData: ObservableObject {
         }
     }
     
-    //MARK: Filmaking Quality - Acting, writing, directing, cinematography, visual effects
+    // MARK: Filmmaking - Acting, Writing, Directing, etc.
     @Published var selectedFilmmakingPreferences: Set<FilmmakingPreferences> {
         didSet {
             let rawValues = selectedFilmmakingPreferences.map(\.rawValue).sorted()
@@ -82,19 +82,62 @@ final class MoviePreferencesData: ObservableObject {
         }
     }
 
+    // MARK: Studios
+    @Published var selectedStudioPreferences: Set<StudioPreferences> {
+        didSet {
+            let rawValues = selectedStudioPreferences.map(\.rawValue).sorted()
+            defaults.set(rawValues, forKey: Keys.studios)
+        }
+    }
+    
+    var sortedSelectedStudiosArray: [StudioPreferences] {
+        selectedStudioPreferences.sorted { $0.title < $1.title }
+    }
+    
+    var sortedSelectedStudiosString: String {
+        sortedSelectedStudiosArray.map(\.title).joined(separator: ", ")
+    }
+    
+    func toggleStudioPreference(_ preference: StudioPreferences) {
+        if selectedStudioPreferences.contains(preference) {
+            selectedStudioPreferences.remove(preference)
+        } else {
+            selectedStudioPreferences.insert(preference)
+        }
+    }
+
+    // MARK: Themes
+    @Published var selectedThemePreferences: Set<ThemePreferences> {
+        didSet {
+            let rawValues = selectedThemePreferences.map(\.rawValue).sorted()
+            defaults.set(rawValues, forKey: Keys.themes)
+        }
+    }
+    
+    var sortedSelectedThemesArray: [ThemePreferences] {
+        selectedThemePreferences.sorted { $0.title < $1.title }
+    }
+    
+    var sortedSelectedThemesString: String {
+        sortedSelectedThemesArray.map(\.title).joined(separator: ", ")
+    }
+    
+    func toggleThemePreference(_ preference: ThemePreferences) {
+        if selectedThemePreferences.contains(preference) {
+            selectedThemePreferences.remove(preference)
+        } else {
+            selectedThemePreferences.insert(preference)
+        }
+    }
+
     private enum Keys {
         static let genres = "moviePreferences.genres"
         static let animation = "moviePreferences.animation"
         static let filmmaking = "moviePreferences.filmmaking"
+        static let studios = "moviePreferences.studios"
+        static let themes = "moviePreferences.themes"
     }
     
-    
-    //MARK: Studio and Production Companies - disney, universal, warner bros, pixar, illumination
-    
-    //MARK: Universes - marvel, star wars, harry potter, breaking bad
-    
-    //MARK: Themes and Topics and Mood - subject matter, tropes, tone, thought-provoking (heist, coming of age, feel good, villainous)
-
     // MARK: Defaults
     private let defaults: UserDefaults
 
@@ -124,6 +167,21 @@ final class MoviePreferencesData: ObservableObject {
         } else {
             selectedFilmmakingPreferences = []
         }
+
+        // Studios
+        if let storedStudios = defaults.array(forKey: Keys.studios) as? [String] {
+            let prefs = storedStudios.compactMap(StudioPreferences.init(rawValue:))
+            selectedStudioPreferences = Set(prefs)
+        } else {
+            selectedStudioPreferences = []
+        }
+
+        // Themes
+        if let storedThemes = defaults.array(forKey: Keys.themes) as? [String] {
+            let prefs = storedThemes.compactMap(ThemePreferences.init(rawValue:))
+            selectedThemePreferences = Set(prefs)
+        } else {
+            selectedThemePreferences = []
+        }
     }
 }
-

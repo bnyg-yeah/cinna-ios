@@ -83,6 +83,46 @@ struct MoviePreferences: View {
                     }
                     .tint(.accentColor)
                 }
+                
+                Text("Studios")
+                    .font(.headline)
+                ForEach(StudioPreferences.allCases) { studioPreference in
+                    Toggle(isOn: Binding(
+                        get: {
+                            moviePreferences.selectedStudioPreferences.contains(studioPreference)
+                        },
+                        set: { isOn in
+                            if isOn {
+                                moviePreferences.selectedStudioPreferences.insert(studioPreference)
+                            } else {
+                                moviePreferences.selectedStudioPreferences.remove(studioPreference)
+                            }
+                        }
+                    )) {
+                        Label(studioPreference.title, systemImage: studioPreference.symbol)
+                    }
+                    .tint(.accentColor)
+                }
+                
+                Text("Themes")
+                    .font(.headline)
+                ForEach(ThemePreferences.allCases) { themePreference in
+                    Toggle(isOn: Binding(
+                        get: {
+                            moviePreferences.selectedThemePreferences.contains(themePreference)
+                        },
+                        set: { isOn in
+                            if isOn {
+                                moviePreferences.selectedThemePreferences.insert(themePreference)
+                            } else {
+                                moviePreferences.selectedThemePreferences.remove(themePreference)
+                            }
+                        }
+                    )) {
+                        Label(themePreference.title, systemImage: themePreference.symbol)
+                    }
+                    .tint(.accentColor)
+                }
             }
         }
         .scrollContentBackground(.hidden)
