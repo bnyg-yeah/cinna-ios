@@ -88,12 +88,12 @@ struct User: View {
                 Image("UserPicture")
                     .resizable()
                     .scaledToFit()
-                    .frame(maxWidth: 240)
+                    .frame(maxWidth: 200)
                     .frame(maxWidth: .infinity)
                     .padding(.top, 32)
                 
             }  //end body
-            .safeAreaPadding(.top)
+//            .safeAreaPadding(.top)
             .padding(.horizontal, 20)
             .padding(.bottom, 32)
             .scrollIndicators(.hidden)
