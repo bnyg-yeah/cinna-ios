@@ -15,14 +15,14 @@ struct TMDbResponse: Decodable {
 
 // MARK: - Basic movie used by lists and MovieNode-graphrag
 
-struct TMDbMovie: Decodable, Identifiable, Hashable {
+struct TMDbMovie: Codable, Identifiable, Hashable {
     let id: Int
     let title: String
     let overview: String
     let releaseDate: String?
     let posterPath: String?
     let voteAverage: Double
-    let genreIDs: [Int]?    // <-- add this line
+    let genreIDs: [Int]?    
 
     // Handy computed year for prompts/UI
     var year: String {

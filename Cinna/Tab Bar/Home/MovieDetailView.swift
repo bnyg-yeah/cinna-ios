@@ -266,6 +266,7 @@ struct MovieDetailView: View {
                         ForEach(1...4, id: \.self) { value in
                             Button {
                                 UserRatings.shared.setRating(value, for: movie.id)
+                                currentUserRating = value
                             } label: {
                                 Text("\(value)")
                                     .font(.headline)
@@ -278,6 +279,7 @@ struct MovieDetailView: View {
                         
                         Button {
                             UserRatings.shared.clearRating(for: movie.id)
+                            currentUserRating = nil
                         } label: {
                             Text("Clear")
                                 .font(.subheadline)
