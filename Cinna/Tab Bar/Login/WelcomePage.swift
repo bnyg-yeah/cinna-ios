@@ -24,7 +24,7 @@ struct WelcomeView: View {
             Text("Welcome to \(Text("Cinna").italic())")
                 .font(.largeTitle).bold()
             
-            Text("Your AI-powered movie servant, ready to tailor reviews, recommend films, and even show your seat view.")
+            Text("Your AI-powered movie servant, ready to tailor reviews, recommend films, and even blend you into a movie scene.")
                 .multilineTextAlignment(.center)
                 .foregroundStyle(.secondary)
                 .padding(.horizontal)

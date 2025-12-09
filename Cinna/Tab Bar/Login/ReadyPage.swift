@@ -26,7 +26,7 @@ struct ReadyView: View {
                 Text("All Set, \(name.isEmpty ? "my Cinna" : name)!")
                     .font(.largeTitle).bold()
 
-                Text("\(Text("Cinna").italic()) is now able to find movies tirelessly for free!")
+                Text("\(Text("Cinna").italic()) is now able to tirelessly find movies for you for free!")
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
