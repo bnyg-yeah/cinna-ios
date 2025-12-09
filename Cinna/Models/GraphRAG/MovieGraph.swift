@@ -10,10 +10,13 @@ import Foundation
 
 /// Knowledge graph that stores movies and their relationships with semantic understanding
 class MovieGraph {
+    private static var didPrintDebugScores = false
     private var nodes: [Int: MovieNode] = [:]
     private var edges: Set<MovieEdge> = []
     private var genreIndex: [Int: Set<Int>] = [:]  // genreID -> Set of movieIDs
     private let animationGenreID = 16
+    
+
     
     // Store preference embeddings for quality score calculation
     private var preferenceEmbeddings: PreferenceEmbeddings?
@@ -131,76 +134,83 @@ class MovieGraph {
             
             nodes[id]?.graphScore = centralityScore
         }
+        
     }
     
-    // MARK: - Calculate Filmmaking Quality Scores
-    
-    /// Calculate filmmaking quality scores by comparing movie embeddings to preference embeddings
     func calculateFilmmakingScores(preferenceEmbeddings: PreferenceEmbeddings) {
         self.preferenceEmbeddings = preferenceEmbeddings
-        
-        var debugCount = 0
-        
+
         for (id, node) in nodes {
             guard let movieEmbedding = node.textEmbedding else { continue }
-            
-            // Calculate similarity to each preference dimension
-            if let actingEmb = preferenceEmbeddings.actingEmbedding {
-                let similarity = EmbeddingService.cosineSimilarity(movieEmbedding, actingEmb)
-                // Simple linear scaling: 0.0 → 0, 0.5 → 5.0, 1.0 → 10.0
-                nodes[id]?.actingScore = Double(similarity) * 10.0
+            let R = node.movie.voteAverage   // global rating 0–10
+
+            // --- Acting ---
+            if let emb = preferenceEmbeddings.actingEmbedding {
+                let T = Double(EmbeddingService.cosineSimilarity(movieEmbedding, emb)) * 10.0
+                nodes[id]?.actingScore = 0.4 * R + 0.6 * T
             }
 
-            if let directingEmb = preferenceEmbeddings.directingEmbedding {
-                let similarity = EmbeddingService.cosineSimilarity(movieEmbedding, directingEmb)
-                nodes[id]?.directingScore = Double(similarity) * 10.0
+            // --- Directing ---
+            if let emb = preferenceEmbeddings.directingEmbedding {
+                let T = Double(EmbeddingService.cosineSimilarity(movieEmbedding, emb)) * 10.0
+                nodes[id]?.directingScore = 0.5 * R + 0.5 * T
             }
 
-            if let cinematographyEmb = preferenceEmbeddings.cinematographyEmbedding {
-                let similarity = EmbeddingService.cosineSimilarity(movieEmbedding, cinematographyEmb)
-                nodes[id]?.cinematographyScore = Double(similarity) * 10.0
-                
-                // DEBUG: Print first 5 movies
-                if debugCount < 5 {
-                    print("🔍 Movie: \(node.movie.title)")
-                    print("   Similarity: \(String(format: "%.3f", similarity))")
-                    print("   Score: \(String(format: "%.2f", Double(similarity) * 10.0))/10")
-                    debugCount += 1
-                }
+            // --- Writing ---
+            if let emb = preferenceEmbeddings.writingEmbedding {
+                let T = Double(EmbeddingService.cosineSimilarity(movieEmbedding, emb)) * 10.0
+                nodes[id]?.writingScore = 0.4 * R + 0.6 * T
             }
 
-            if let writingEmb = preferenceEmbeddings.writingEmbedding {
-                let similarity = EmbeddingService.cosineSimilarity(movieEmbedding, writingEmb)
-                nodes[id]?.writingScore = Double(similarity) * 10.0
+            // --- Cinematography ---
+            if let emb = preferenceEmbeddings.cinematographyEmbedding {
+                let T = Double(EmbeddingService.cosineSimilarity(movieEmbedding, emb)) * 10.0
+                nodes[id]?.cinematographyScore = 0.3 * R + 0.7 * T
             }
 
-            if let soundEmb = preferenceEmbeddings.soundEmbedding {
-                let similarity = EmbeddingService.cosineSimilarity(movieEmbedding, soundEmb)
-                nodes[id]?.soundScore = Double(similarity) * 10.0
+            // --- Sound ---
+            if let emb = preferenceEmbeddings.soundEmbedding {
+                let T = Double(EmbeddingService.cosineSimilarity(movieEmbedding, emb)) * 10.0
+                nodes[id]?.soundScore = 0.3 * R + 0.7 * T
             }
 
-            if let vfxEmb = preferenceEmbeddings.visualEffectsEmbedding {
-                let similarity = EmbeddingService.cosineSimilarity(movieEmbedding, vfxEmb)
-                nodes[id]?.visualEffectsScore = Double(similarity) * 10.0
+            // --- Visual Effects ---
+            if let emb = preferenceEmbeddings.visualEffectsEmbedding {
+                let T = Double(EmbeddingService.cosineSimilarity(movieEmbedding, emb)) * 10.0
+                nodes[id]?.visualEffectsScore = 0.3 * R + 0.7 * T
             }
-            // Debug: print full scores for first movie (updated values)
-            if id == nodes.keys.first {
-                if let updated = nodes[id] {
-                    print("\n🎬 FULL SCORES FOR: \(updated.movie.title)")
-                    print("   Acting: \(String(format: "%.2f", updated.actingScore))")
-                    print("   Directing: \(String(format: "%.2f", updated.directingScore))")
-                    print("   Cinematography: \(String(format: "%.2f", updated.cinematographyScore))")
-                    print("   Writing: \(String(format: "%.2f", updated.writingScore))")
-                    print("   Sound: \(String(format: "%.2f", updated.soundScore))")
-                    print("   VFX: \(String(format: "%.2f", updated.visualEffectsScore))")
-                }
-            }
-
         }
-        
-        print("✅ Calculated filmmaking scores for \(nodes.count) movies")
+        // ================= TEST BLOCK A: Final Scores for Top Movies =================
+
+        if !MovieGraph.didPrintDebugScores {
+            MovieGraph.didPrintDebugScores = true
+
+            print("\n========== TEST: FINAL FILMMAKING SCORES (Top 5 Movies) ==========\n")
+
+            let sampleMovies = nodes.values.prefix(5)
+
+            for node in sampleMovies {
+                let title = node.movie.title
+                let R = node.movie.voteAverage
+
+                print("🎬 \(title)")
+                print("  Rating (R): \(String(format: "%.2f", R))")
+                print("  Acting Score: \(String(format: "%.2f", node.actingScore))")
+                print("  Directing Score: \(String(format: "%.2f", node.directingScore))")
+                print("  Cinematography Score: \(String(format: "%.2f", node.cinematographyScore))")
+                print("  Writing Score: \(String(format: "%.2f", node.writingScore))")
+                print("  Sound Score: \(String(format: "%.2f", node.soundScore))")
+                print("  VFX Score: \(String(format: "%.2f", node.visualEffectsScore))")
+                print("--------------------------------------------\n")
+            }
+
+            print("===================================================================\n")
+        }
+
+
     }
-    
+
+
     // MARK: - Calculate Animation Scores
     
     /// Calculate animation quality/style scores using embeddings and TMDb metadata
@@ -303,7 +313,9 @@ class MovieGraph {
                 let score = EmbeddingService.cosineSimilarity(movieEmbedding, marvelEmbedding)
                 nodes[id]?.marvelScore = Double(score) * 10.0
             }
+
         }
+        
         
         print("🏢 Calculated studio scores for \(nodes.count) movies")
     }
@@ -493,11 +505,28 @@ class MovieGraph {
                 }
             }
             
-            nodes[id]?.graphScore += boost
-            calculatedCount += 1
+            let oldScore = nodes[id]?.graphScore ?? 0
+            let newScore = oldScore + boost
+            nodes[id]?.graphScore = newScore
+
+            if boost > 0 {
+                print("""
+                🎨 Animation Preference Applied → \(node.movie.title)
+                    Scores:
+                        quality: \(String(format: "%.2f", node.animationQualityScore))
+                        2D: \(String(format: "%.2f", node.twoDAnimationScore))
+                        3D: \(String(format: "%.2f", node.threeDAnimationScore))
+                        stopMotion: \(String(format: "%.2f", node.stopMotionScore))
+                        anime: \(String(format: "%.2f", node.animeScore))
+                        stylized: \(String(format: "%.2f", node.stylizedArtScore))
+                    Boost Applied: +\(String(format: "%.2f", boost))
+                    GraphScore: \(String(format: "%.2f", oldScore)) → \(String(format: "%.2f", newScore))
+                """)
+            }
+
         }
         
-        print("🎨 Applied \(preferences.count) animation preferences to \(calculatedCount) animation films")
+        
     }
     
     func applyStudioPreferences(_ preferences: Set<StudioPreferences>) {
@@ -523,12 +552,30 @@ class MovieGraph {
                     score = node.marvelScore
                 }
                 
-                if score >= 6.0 {
+                if score >= 2.0 {
                     boost += (score - 5.0) * 0.5
                 }
             }
             
-            nodes[id]?.graphScore += boost
+            let oldScore = nodes[id]?.graphScore ?? 0
+            let newScore = oldScore + boost
+            nodes[id]?.graphScore = newScore
+
+            if boost > 0 {
+                print("""
+                🏢 Studio Preference Applied → \(node.movie.title)
+                    Scores:
+                        Disney: \(String(format: "%.2f", node.disneyScore))
+                        Pixar: \(String(format: "%.2f", node.pixarScore))
+                        Illumination: \(String(format: "%.2f", node.illuminationScore))
+                        Universal: \(String(format: "%.2f", node.universalScore))
+                        WarnerBros: \(String(format: "%.2f", node.warnerBrosScore))
+                        Marvel: \(String(format: "%.2f", node.marvelScore))
+                    Boost Applied: +\(String(format: "%.2f", boost))
+                    GraphScore: \(String(format: "%.2f", oldScore)) → \(String(format: "%.2f", newScore))
+                """)
+            }
+
         }
         
         print("🏢 Applied \(preferences.count) studio preferences")
@@ -559,12 +606,31 @@ class MovieGraph {
                     score = node.learningThemeScore
                 }
                 
-                if score >= 6.0 {
+                if score >= 2.0 {
                     boost += (score - 5.0) * 0.5
                 }
             }
             
-            nodes[id]?.graphScore += boost
+            let oldScore = nodes[id]?.graphScore ?? 0
+            let newScore = oldScore + boost
+            nodes[id]?.graphScore = newScore
+
+            if boost > 0 {
+                print("""
+                🎭 Theme Preference Applied → \(node.movie.title)
+                    Scores:
+                        lighthearted: \(String(format: "%.2f", node.lightheartedThemeScore))
+                        dark: \(String(format: "%.2f", node.darkThemeScore))
+                        emotional: \(String(format: "%.2f", node.emotionalThemeScore))
+                        comingOfAge: \(String(format: "%.2f", node.comingOfAgeThemeScore))
+                        survival: \(String(format: "%.2f", node.survivalThemeScore))
+                        relaxing: \(String(format: "%.2f", node.relaxingThemeScore))
+                        learning: \(String(format: "%.2f", node.learningThemeScore))
+                    Boost Applied: +\(String(format: "%.2f", boost))
+                    GraphScore: \(String(format: "%.2f", oldScore)) → \(String(format: "%.2f", newScore))
+                """)
+            }
+
         }
         
         print("🎭 Applied \(preferences.count) theme preferences")
