@@ -413,6 +413,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				INFOPLIST_KEY_NSLocationUsageDescription = "We need your location once to find nearby theaters.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We use your location to find nearby theaters.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Allow saving blended photos to your photo library.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
@@ -447,6 +448,7 @@
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.entertainment";
 				INFOPLIST_KEY_NSLocationUsageDescription = "We need your location once to find nearby theaters.";
 				INFOPLIST_KEY_NSLocationWhenInUseUsageDescription = "We use your location to find nearby theaters.";
+				INFOPLIST_KEY_NSPhotoLibraryUsageDescription = "Allow saving blended photos to your photo library.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;

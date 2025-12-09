@@ -102,7 +102,7 @@ final class AIMovieSceneBlenderService {
         }
 
         // MARK: Scene Blender PROMPT
-        let prompt = "Take the person/people from the second image and incorporate them semalessly into the scene from the first image. Preserve the person's identity, and match the lighting, color grading, and vibe of the first image. Return a single final blended image."
+        let prompt = "Take the person/people from the second image and incorporate them seamlessly into the scene from the first image. Preserve the person's identity, and match the lighting, color grading, and vibe of the first image. You may modify the person's pose and size, so that they integrate better into the first image. Return a single final blended image."
 
         let contents: [RequestBody.Content] = [
             .init(parts: [
