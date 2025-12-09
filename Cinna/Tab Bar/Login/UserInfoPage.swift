@@ -109,6 +109,12 @@ struct UserInfoView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                .gesture(
+                    TapGesture().onEnded { UIApplication.shared.endEditing() }
+                )
+                .scrollDismissesKeyboard(.immediately)
+
+
             }
             .background(Color(.systemBackground))
             .safeAreaInset(edge: .bottom) {

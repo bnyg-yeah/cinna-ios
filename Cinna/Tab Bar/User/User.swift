@@ -56,6 +56,7 @@ struct User: View {
                 
                 //list of menu items
                 VStack(spacing: 12) {
+                    
                     NavigationLink(destination: Profile()) {
                         UserMenuItem(
                             title: "Profile",
@@ -63,17 +64,17 @@ struct User: View {
                         )
                     }
                     
-                    NavigationLink(destination: MovieTickets()) {
-                        UserMenuItem(
-                            title: "Movie Tickets",
-                            systemImage: "ticket"
-                        )
-                    }
-                    
                     NavigationLink(destination: MoviePreferences()) {
                         UserMenuItem(
                             title: "Movie Preferences",
                             systemImage: "slider.horizontal.3"
+                        )
+                    }
+                    
+                    NavigationLink(destination: MovieHistory()) {
+                        UserMenuItem(
+                            title: "Movie History",
+                            systemImage: "ticket"
                         )
                     }
                     

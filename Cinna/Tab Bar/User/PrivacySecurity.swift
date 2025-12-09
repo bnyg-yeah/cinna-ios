@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import Foundation
 
 struct PrivacySecurity: View {
     @State private var didClear = false
@@ -78,11 +79,13 @@ struct PrivacySecurity: View {
 enum PrivacySecurityWiper {
     static func wipeAll() {
         let defaults = UserDefaults.standard
-        let domain = Bundle.main.bundleIdentifier ?? ""
-        defaults.removePersistentDomain(forName: domain)
+        if let domain = Bundle.main.bundleIdentifier {
+            defaults.removePersistentDomain(forName: domain)
+        }
         defaults.synchronize()
 
-        UserPhotosManager.shared.deleteAllUserPhotoFiles()
+        UserPhotosManager.shared.clearAllPhotos()
+        URLCache.shared.removeAllCachedResponses()
     }
 }
 
