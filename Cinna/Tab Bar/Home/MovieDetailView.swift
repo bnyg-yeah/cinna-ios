@@ -346,7 +346,14 @@ struct MovieDetailView: View {
             self.movieDetails = details
             MovieDataStore.shared.storeDetails(details, for: movie.id)
             
-            let preferenceTags = moviePreferences.sortedSelectedGenresArray.map(\.title)
+            // All the preferenes that the user selected
+            let preferenceTags =
+                moviePreferences.sortedSelectedGenresArray.map(\.title)
+                + moviePreferences.sortedSelectedFilmmakingArray.map(\.title)
+                + moviePreferences.sortedSelectedAnimationArray.map(\.title)
+                + moviePreferences.sortedSelectedStudiosArray.map(\.title)
+                + moviePreferences.sortedSelectedThemesArray.map(\.title)
+
             
             //Call Gemini HERE
             aiSummary = try await AIOverviewService.shared.generateTailoredOverview(
