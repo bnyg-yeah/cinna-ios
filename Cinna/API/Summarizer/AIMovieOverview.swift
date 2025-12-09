@@ -28,11 +28,11 @@ enum AIOverviewError: Error {
 final class AIOverviewService {
     static let shared = AIOverviewService()
     private init() {}
-
+    
     private var apiKey: String {
         (Bundle.main.object(forInfoDictionaryKey: "GEMINI_API_KEY") as? String) ?? ""
     }
-
+    
     /// Enhanced method that strictly grounds the AI response in provided data
     func generateTailoredOverview(
         movie: TMDbMovie,
@@ -41,7 +41,7 @@ final class AIOverviewService {
         preferenceTags: [String]
     ) async throws -> AIMovieOverview {
         guard !apiKey.isEmpty else { throw AIOverviewError.missingAPIKey }
-
+        
         // 1. Collect and validate all data points
         let dataPoints = extractVerifiedDataPoints(
             movie: movie,
@@ -49,7 +49,7 @@ final class AIOverviewService {
             reviews: reviews
         )
         
-        #if DEBUG
+#if DEBUG
         print("\n🔍 Data Points for AI Grounding:")
         print("  - Runtime: \(dataPoints.runtime)")
         print("  - Genres: \(dataPoints.genres)")
@@ -58,8 +58,8 @@ final class AIOverviewService {
         print("  - Review excerpts: \(dataPoints.reviewExcerpts.count)")
         print("  - User preferences: \(preferenceTags)")
         print("  - Genre match score: \(calculateGenreMatchScore(movieGenres: dataPoints.genres, userPreferences: preferenceTags))")
-        #endif
-
+#endif
+        
         // 2. Build strictly grounded prompt
         let prompt = buildGroundedPrompt(
             movie: movie,
@@ -67,19 +67,19 @@ final class AIOverviewService {
             preferenceTags: preferenceTags
         )
         
-        #if DEBUG
+#if DEBUG
         print("\n📝 Prompt length: \(prompt.count) characters")
-        #endif
-
+#endif
+        
         // 3. Call Gemini with strict JSON output
         let summary = try await callGeminiAPI(prompt: prompt)
         
         // 4. Validate the response is grounded in data
         return validateAndReturnOverview(summary, dataPoints: dataPoints)
     }
-
+    
     // MARK: - Data Extraction with Validation
-
+    
     private struct VerifiedDataPoints {
         let runtime: String
         let tagline: String
@@ -95,7 +95,7 @@ final class AIOverviewService {
         let reviewExcerpts: [String]
         let streamingProviders: [String]
     }
-
+    
     private func extractVerifiedDataPoints(
         movie: TMDbMovie,
         details: TMDbMovieDetails,
@@ -108,8 +108,8 @@ final class AIOverviewService {
             let hours = runtime / 60
             let minutes = runtime % 60
             return hours > 0
-                ? String(format: "%d h %02d m", hours, minutes)
-                : "\(minutes) min"
+            ? String(format: "%d h %02d m", hours, minutes)
+            : "\(minutes) min"
         }()
         
         // Cast - only verified data
@@ -182,27 +182,33 @@ final class AIOverviewService {
             streamingProviders: streamingProviders
         )
     }
-
+    
     // MARK: - Prompt Building with Strict Grounding
-
+    
     private func buildGroundedPrompt(
         movie: TMDbMovie,
         dataPoints: VerifiedDataPoints,
         preferenceTags: [String]
     ) -> String {
+        
+        // MARK: Preferences analysis
+        let genrePrefs = preferenceTags.filter { GenrePreferences.allCases.map(\.title).contains($0) }
+        let filmmakingPrefs = preferenceTags.filter { FilmmakingPreferences.allCases.map(\.title).contains($0) }
+        let animationPrefs = preferenceTags.filter { AnimationPreferences.allCases.map(\.title).contains($0) }
+        let studioPrefs = preferenceTags.filter { StudioPreferences.allCases.map(\.title).contains($0) }
+        let themePrefs = preferenceTags.filter { ThemePreferences.allCases.map(\.title).contains($0) }
+        
+        let genreMatches = dataPoints.genres.filter { g in
+            genrePrefs.contains { $0.lowercased() == g.lowercased() }
+        }
+        let focusGenres = genreMatches.isEmpty ? genrePrefs : genreMatches
+        
         var facts: [String] = []
         facts.append("Title: \(movie.title)")
         facts.append("Year: \(movie.year)")
-
-        let genreMatches = dataPoints.genres.filter { g in
-            preferenceTags.contains { $0.lowercased() == g.lowercased() }
-        }
-        let focusGenres = genreMatches.isEmpty ? preferenceTags : genreMatches
-
-        // Put matched genres first and keep the full list separately for grounding only
         facts.append("Focus genres: \(focusGenres.isEmpty ? "None" : focusGenres.joined(separator: ", "))")
         facts.append("All genres: \(dataPoints.genres.isEmpty ? "Not specified" : dataPoints.genres.joined(separator: ", "))")
-
+        
         if !dataPoints.tagline.isEmpty {
             facts.append("Tagline: \(dataPoints.tagline)")
         }
@@ -218,55 +224,73 @@ final class AIOverviewService {
         if !dataPoints.keywords.isEmpty {
             facts.append("Themes/Keywords: \(dataPoints.keywords.joined(separator: ", "))")
         }
-
-        let preferenceAnalysis = """
-        User's preferred genres: \(preferenceTags.isEmpty ? "No specific preferences" : preferenceTags.joined(separator: ", "))
-        Movie's genres: \(dataPoints.genres.joined(separator: ", "))
-        Matching genres (focus): \(focusGenres.isEmpty ? "None" : focusGenres.joined(separator: ", "))
+        
+        let preferenceBreakdown = """
+        Genres: \(genrePrefs.isEmpty ? "None" : genrePrefs.joined(separator: ", "))
+        Filmmaking Interests: \(filmmakingPrefs.isEmpty ? "None" : filmmakingPrefs.joined(separator: ", "))
+        Animation Interests: \(animationPrefs.isEmpty ? "None" : animationPrefs.joined(separator: ", "))
+        Studios: \(studioPrefs.isEmpty ? "None" : studioPrefs.joined(separator: ", "))
+        Themes & Mood: \(themePrefs.isEmpty ? "None" : themePrefs.joined(separator: ", "))
         """
-
+        
+        let preferenceExpectations = """
+        1) Genres indicate story style and tone.
+        2) Filmmaking interests apply ONLY when supported by verified facts (cast, crew jobs, keywords, or reviews).
+        3) Animation interests apply ONLY when the movie is animated or has visual-art keywords.
+        4) Studio preferences apply ONLY if production companies match or relate.
+        5) Theme preferences apply ONLY if matched by verified keywords, tagline, or plot tone.
+        """
+        
+        // MARK: Prompt
         let prompt = """
-        Create a movie overview tailored strictly to the user's focus genres. Center the writeup on the focus genres only. Non-focus genres may be mentioned once at most and only as background.
-
+        Create a movie overview tailored to ALL user preference groups: genres, filmmaking, animation, studios, and themes. Only use verified data.
+        
         MOVIE FACTS:
         \(facts.map { "• \($0)" }.joined(separator: "\n"))
-
+        
         PLOT OVERVIEW:
         \(movie.overview)
-
+        
         REVIEW EXCERPTS:
         \(dataPoints.reviewExcerpts.isEmpty ? "No reviews available" : dataPoints.reviewExcerpts.enumerated().map { "Review \($0.offset + 1): \($0.element)" }.joined(separator: "\n"))
-
-        PREFERENCE MATCHING:
-        \(preferenceAnalysis)
-
+        
+        USER PREFERENCES PROVIDED:
+        \(preferenceBreakdown)
+        
+        RELEVANCE EXPECTATIONS:
+        \(preferenceExpectations)
+        
         RULES:
-        1) Begin with one sentence that directly addresses why this is a strong fit for the focus genres (e.g., “If you love Comedy, ...”).
-        2) At least 70% of sentences must develop the focus genres with concrete elements from the facts or reviews.
-        3) Do not include runtime, numeric ratings, vote counts, certifications, or streaming platforms in the summary.
-        4) Cast, director, or keywords are allowed only when they reinforce the focus genres.
-        5) Keep the summary between 100 and 200 words, and the summary should be easy to read and follow along.
-        6) Tailored points must each map explicitly to a focus genre element.
-        7) Fit score must primarily reflect alignment with the focus genres.
-
+        1) Begin with one sentence explaining why the movie aligns with the user's strongest matching preference signals (genres, themes, filmmaking, animation, studio).
+        2) At least 70 percent of sentences must develop elements tied to these matching preferences, grounded in verified facts.
+        3) Do not include runtime, numeric ratings, vote counts, certifications, or streaming platforms.
+        4) Cast, director, or keywords may be referenced ONLY when they reinforce a chosen preference.
+        5) Keep the summary between 100 and 200 words, easy to read.
+        6) Tailored points must explicitly map to a specific user preference element and reference the movie fact that supports it.
+        7) Fit score must consider alignment with all relevant preference groups.
+        8) Filmmaking preferences must be grounded using cast, crew, directing, writing, or review evidence.
+        9) Animation preferences apply ONLY when the genre, keywords, or reviews justify it.
+        10) Studio preferences apply ONLY if production companies meaningfully match.
+        11) Theme preferences must reflect verified keywords, tagline, or actual plot tone.
+        
         OUTPUT FORMAT (strict JSON):
         {
           "summary": "100-200 words focused on the user's preferences",
-          "tailoredPoints": ["3-4 bullets, each tied to a user preference element"],
+          "tailoredPoints": ["3-4 bullets, each tied to a strongly matched user preference element, do not need to explicitly mention the user's preference"],
           "fitScore": 0-100,
-          "dataSourcesUsed": ["genres", "cast", "keywords", "reviews"]
+          "dataSourcesUsed": ["genres", "cast", "crew", "keywords", "themes", "animation", "studio", "reviews"]
         }
-
+        
         Return only valid JSON.
         """
-
+        
         return prompt
     }
-
-
-
+    
+    
+    
     // MARK: - API Call
-
+    
     private func callGeminiAPI(prompt: String) async throws -> AIMovieOverview {
         // Ordered list of model endpoints
         let modelEndpoints = [
@@ -286,7 +310,7 @@ final class AIOverviewService {
             let contents: [Content]
             let generationConfig: GenerationConfig?
         }
-
+        
         struct GeminiResponse: Codable {
             struct Candidate: Codable {
                 struct Content: Codable {
@@ -318,18 +342,18 @@ final class AIOverviewService {
                 req.setValue(apiKey, forHTTPHeaderField: "X-Goog-Api-Key")
                 req.httpBody = bodyData
                 
-                #if DEBUG
+#if DEBUG
                 print("🚀 Trying Gemini endpoint: \(endpoint)")
-                #endif
+#endif
                 
                 let (data, response) = try await URLSession.shared.data(for: req)
                 
                 // Optionally inspect response for status code
                 if let http = response as? HTTPURLResponse, http.statusCode == 429 {
                     // Rate limit hit, skip this endpoint
-                    #if DEBUG
+#if DEBUG
                     print("⚠️ Rate limit for endpoint: \(endpoint) (HTTP 429)")
-                    #endif
+#endif
                     lastError = AIOverviewError.insufficientData
                     continue
                 }
@@ -351,20 +375,20 @@ final class AIOverviewService {
                 }
             } catch {
                 lastError = error
-                #if DEBUG
+#if DEBUG
                 print("⚠️ Endpoint failed: \(endpoint) with error: \(error)")
-                #endif
+#endif
                 continue
             }
         }
         
         throw lastError ?? AIOverviewError.noCandidates
     }
-
-
-
+    
+    
+    
     // MARK: - Response Validation
-
+    
     private func validateAndReturnOverview(
         _ overview: AIMovieOverview,
         dataPoints: VerifiedDataPoints
@@ -373,9 +397,9 @@ final class AIOverviewService {
         // doesn't contain information not in dataPoints
         return overview
     }
-
+    
     // MARK: - Helpers
-
+    
     private func calculateGenreMatchScore(
         movieGenres: [String],
         userPreferences: [String]
@@ -391,18 +415,18 @@ final class AIOverviewService {
         let score = (matches * 100) / max(userPreferences.count, 1)
         return min(100, max(0, score))
     }
-
+    
     /// Extract the first { ... } JSON object from a string
     private static func extractJSONObject(from text: String) -> String {
         let trimmed = text
             .replacingOccurrences(of: "```json", with: "```")
             .trimmingCharacters(in: .whitespacesAndNewlines)
-
+        
         if trimmed.hasPrefix("```") && trimmed.hasSuffix("```") {
             let body = trimmed.dropFirst(3).dropLast(3)
             return String(body).trimmingCharacters(in: .whitespacesAndNewlines)
         }
-
+        
         if let start = trimmed.firstIndex(of: "{") {
             var depth = 0
             for i in trimmed[start...].indices {

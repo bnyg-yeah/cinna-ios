@@ -15,7 +15,7 @@ struct TheaterCard: View {
     @ObservedObject private var favorites = FavoriteTheater.shared
 
     var body: some View {
-        HStack(alignment: .top, spacing: 16) {
+        HStack(alignment: .center, spacing: 16) {
             // Leading visual: brand logo if available, else default logo
             Group {
                 let imageName = logoAssetName ?? "logo_default"
@@ -60,6 +60,7 @@ struct TheaterCard: View {
                         favorites.toggleFavorite(id: theater.id)
                     } label: {
                         Image(systemName: favorites.isFavorite(id: theater.id) ? "star.fill" : "star")
+                            .font(.headline) // Increased star size a bit
                             .foregroundStyle(favorites.isFavorite(id: theater.id) ? .yellow : .secondary)
                             .accessibilityLabel(favorites.isFavorite(id: theater.id) ? "Unfavorite" : "Mark as Favorite")
                     }
@@ -110,3 +111,4 @@ struct TheaterCard: View {
         }
     }
 }
+

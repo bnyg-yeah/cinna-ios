@@ -42,7 +42,6 @@ struct Theaters: View {
                             .font(.subheadline)
                             .foregroundStyle(.white.opacity(0.8))
                     }
-                    .padding(.top, 8)
 
                     // Content area: switch only the inner content, not the whole scaffold
                     Group {
@@ -109,7 +108,6 @@ struct Theaters: View {
                         }
                     }
                 }
-                .padding(.top, 24)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)
             }

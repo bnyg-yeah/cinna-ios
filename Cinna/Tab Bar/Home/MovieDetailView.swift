@@ -265,7 +265,7 @@ struct MovieDetailView: View {
                     HStack(alignment: .center, spacing: 10) {
                         ForEach(1...4, id: \.self) { value in
                             Button {
-                                UserRatings.shared.setRating(value, for: movie.id)
+                                userRatings.setRating(value, for: movie)
                             } label: {
                                 Text("\(value)")
                                     .font(.headline)
@@ -277,7 +277,7 @@ struct MovieDetailView: View {
                         }
                         
                         Button {
-                            UserRatings.shared.clearRating(for: movie.id)
+                            userRatings.setRating(nil, for: movie)
                         } label: {
                             Text("Clear")
                                 .font(.subheadline)
@@ -346,7 +346,14 @@ struct MovieDetailView: View {
             self.movieDetails = details
             MovieDataStore.shared.storeDetails(details, for: movie.id)
             
-            let preferenceTags = moviePreferences.sortedSelectedGenresArray.map(\.title)
+            // All the preferenes that the user selected
+            let preferenceTags =
+                moviePreferences.sortedSelectedGenresArray.map(\.title)
+                + moviePreferences.sortedSelectedFilmmakingArray.map(\.title)
+                + moviePreferences.sortedSelectedAnimationArray.map(\.title)
+                + moviePreferences.sortedSelectedStudiosArray.map(\.title)
+                + moviePreferences.sortedSelectedThemesArray.map(\.title)
+
             
             //Call Gemini HERE
             aiSummary = try await AIOverviewService.shared.generateTailoredOverview(

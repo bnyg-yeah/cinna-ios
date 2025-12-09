@@ -60,6 +60,11 @@ class MovieRecommendationEngine {
             graphRAG.applyUserRatings(userRatings)
             print("⭐ Applied \(userRatings.count) user ratings")
         }
+        print("🎛️ Preferences Received:")
+        print("  Filmmaking → \(selectedFilmmakingPreferences)")
+        print("  Animation  → \(selectedAnimationPreferences)")
+        print("  Studio     → \(selectedStudioPreferences)")
+        print("  Theme      → \(selectedThemePreferences)")
         
         // Step 6: Apply movie preferences (embedding-based)
         if !selectedFilmmakingPreferences.isEmpty {

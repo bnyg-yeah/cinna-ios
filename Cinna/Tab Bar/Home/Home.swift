@@ -18,7 +18,7 @@ struct Home: View {
         NavigationStack {
             Group {
                 if viewModel.isLoading {
-                    ProgressView("Loading movies…")
+                    ProgressView("Recommending movies…")
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
                         .padding(.top, 40)
                 } else if let errorMessage = viewModel.errorMessage {
@@ -31,25 +31,11 @@ struct Home: View {
                         .padding(.horizontal, 24)
                 } else {
                     VStack(spacing: 0) {
-                        // Liquid Glass style search bar that animates in/out
-                        if isSearching {
-                            LiquidGlassSearchBar(text: $searchText) {
-                                withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
-                                    isSearching = false
-                                    searchText = ""
-                                }
-                            }
-                            .transition(.move(edge: .top).combined(with: .opacity))
-                            .padding(.horizontal, 16)
-                            .padding(.top, 8)
-                        }
+
 
                         ScrollView {
-                            VStack(alignment: .center, spacing: 12) {
+                            VStack(alignment: .leading, spacing: 12) {
                                 VStack(alignment: .leading, spacing: 8) {
-                                    Text("Recommended Movies")
-                                        .font(.title.bold())
-                                        .foregroundStyle(.white)
 
                                     if !moviePreferences.selectedGenres.isEmpty {
                                         Text("Based on: \(moviePreferences.sortedSelectedGenresString)")
@@ -86,26 +72,45 @@ struct Home: View {
                     }
                 }
             }
-            .background(BackgroundView())
+            .background(
+                BackgroundView()
+                    .ignoresSafeArea(.keyboard, edges: .bottom)
+            )
 
             .navigationDestination(for: TMDbMovie.self) { movie in
                 MovieDetailView(movie: movie)
             }
-            .navigationTitle("Home")
+            .navigationTitle("Recommended Movies")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .principal) {
+                    if isSearching {
+                        TextField("Search movies", text: $searchText)
+                            .textInputAutocapitalization(.never)
+                            .disableAutocorrection(true)
+                            .foregroundStyle(.white)
+                            .tint(.white)
+                            .frame(maxWidth: .infinity)
+                    } else {
+                        Text("Recommended Movies")
+                            .foregroundStyle(.white)
+                    }
+                }
+
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
-                        withAnimation(.spring(response: 0.3, dampingFraction: 0.9)) {
+                        withAnimation {
                             isSearching.toggle()
-                            if !isSearching { searchText = "" }
+                            if !isSearching {
+                                searchText = ""
+                            }
                         }
                     } label: {
                         Image(systemName: isSearching ? "xmark" : "magnifyingglass")
                     }
-                    .accessibilityLabel(isSearching ? "Close search" : "Search")
                 }
             }
+
             .task { await viewModel.loadMovies(with: moviePreferences) }    // ← UPDATED
             .refreshable { await viewModel.loadMovies(with: moviePreferences) }  // ← UPDATED
         }
