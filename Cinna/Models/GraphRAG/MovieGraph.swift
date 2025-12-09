@@ -313,7 +313,9 @@ class MovieGraph {
                 let score = EmbeddingService.cosineSimilarity(movieEmbedding, marvelEmbedding)
                 nodes[id]?.marvelScore = Double(score) * 10.0
             }
+
         }
+        
         
         print("🏢 Calculated studio scores for \(nodes.count) movies")
     }
@@ -503,11 +505,28 @@ class MovieGraph {
                 }
             }
             
-            nodes[id]?.graphScore += boost
-            calculatedCount += 1
+            let oldScore = nodes[id]?.graphScore ?? 0
+            let newScore = oldScore + boost
+            nodes[id]?.graphScore = newScore
+
+            if boost > 0 {
+                print("""
+                🎨 Animation Preference Applied → \(node.movie.title)
+                    Scores:
+                        quality: \(String(format: "%.2f", node.animationQualityScore))
+                        2D: \(String(format: "%.2f", node.twoDAnimationScore))
+                        3D: \(String(format: "%.2f", node.threeDAnimationScore))
+                        stopMotion: \(String(format: "%.2f", node.stopMotionScore))
+                        anime: \(String(format: "%.2f", node.animeScore))
+                        stylized: \(String(format: "%.2f", node.stylizedArtScore))
+                    Boost Applied: +\(String(format: "%.2f", boost))
+                    GraphScore: \(String(format: "%.2f", oldScore)) → \(String(format: "%.2f", newScore))
+                """)
+            }
+
         }
         
-        print("🎨 Applied \(preferences.count) animation preferences to \(calculatedCount) animation films")
+        
     }
     
     func applyStudioPreferences(_ preferences: Set<StudioPreferences>) {
@@ -533,12 +552,30 @@ class MovieGraph {
                     score = node.marvelScore
                 }
                 
-                if score >= 6.0 {
+                if score >= 2.0 {
                     boost += (score - 5.0) * 0.5
                 }
             }
             
-            nodes[id]?.graphScore += boost
+            let oldScore = nodes[id]?.graphScore ?? 0
+            let newScore = oldScore + boost
+            nodes[id]?.graphScore = newScore
+
+            if boost > 0 {
+                print("""
+                🏢 Studio Preference Applied → \(node.movie.title)
+                    Scores:
+                        Disney: \(String(format: "%.2f", node.disneyScore))
+                        Pixar: \(String(format: "%.2f", node.pixarScore))
+                        Illumination: \(String(format: "%.2f", node.illuminationScore))
+                        Universal: \(String(format: "%.2f", node.universalScore))
+                        WarnerBros: \(String(format: "%.2f", node.warnerBrosScore))
+                        Marvel: \(String(format: "%.2f", node.marvelScore))
+                    Boost Applied: +\(String(format: "%.2f", boost))
+                    GraphScore: \(String(format: "%.2f", oldScore)) → \(String(format: "%.2f", newScore))
+                """)
+            }
+
         }
         
         print("🏢 Applied \(preferences.count) studio preferences")
@@ -569,12 +606,31 @@ class MovieGraph {
                     score = node.learningThemeScore
                 }
                 
-                if score >= 6.0 {
+                if score >= 2.0 {
                     boost += (score - 5.0) * 0.5
                 }
             }
             
-            nodes[id]?.graphScore += boost
+            let oldScore = nodes[id]?.graphScore ?? 0
+            let newScore = oldScore + boost
+            nodes[id]?.graphScore = newScore
+
+            if boost > 0 {
+                print("""
+                🎭 Theme Preference Applied → \(node.movie.title)
+                    Scores:
+                        lighthearted: \(String(format: "%.2f", node.lightheartedThemeScore))
+                        dark: \(String(format: "%.2f", node.darkThemeScore))
+                        emotional: \(String(format: "%.2f", node.emotionalThemeScore))
+                        comingOfAge: \(String(format: "%.2f", node.comingOfAgeThemeScore))
+                        survival: \(String(format: "%.2f", node.survivalThemeScore))
+                        relaxing: \(String(format: "%.2f", node.relaxingThemeScore))
+                        learning: \(String(format: "%.2f", node.learningThemeScore))
+                    Boost Applied: +\(String(format: "%.2f", boost))
+                    GraphScore: \(String(format: "%.2f", oldScore)) → \(String(format: "%.2f", newScore))
+                """)
+            }
+
         }
         
         print("🎭 Applied \(preferences.count) theme preferences")
