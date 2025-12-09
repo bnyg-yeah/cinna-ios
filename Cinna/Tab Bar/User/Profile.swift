@@ -43,35 +43,41 @@ struct Profile: View {
                 // MARK: - Location
                 Section("Location") {
                     VStack(alignment: .leading, spacing: 12) {
-                        
-                        LocationButton(.currentLocation) {
+
+                        let isSaved = (userInfo.useCurrentLocationBool && userInfo.currentLocation != nil)
+
+                        Button {
                             Task { await requestLocationFlow() }
+                        } label: {
+                            HStack(spacing: 8) {
+                                Image(systemName: isSaved ? "checkmark.circle.fill" : "location.fill")
+                                    .font(.headline.weight(.semibold))
+
+                                Text(isSaved ? "Location Saved" : "Use My Location")
+                                    .font(.headline.weight(.semibold))
+                            }
+                            .padding(.vertical, 8)
+                            .padding(.horizontal, 14)
                         }
-                        .labelStyle(.titleAndIcon)
-                        .controlSize(.large)
-                        .buttonBorderShape(.roundedRectangle)
-                        .tint(.accentColor)
-                        .frame(maxWidth: .infinity)
-                        .contentShape(Rectangle())
-                        .disabled(isRequestingLocation)
-                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
-                        
-                        if userInfo.useCurrentLocationBool,
-                           userInfo.currentLocation != nil {
+                        .frame(maxWidth: .infinity, alignment: .center)
+                        .buttonStyle(.glassProminent)
+                        .controlSize(.regular)
+                        .disabled(isRequestingLocation || isSaved)
+                        .opacity(isSaved ? 0.55 : 1)
+                        .animation(.easeInOut(duration: 0.2), value: isSaved)
+
+                        if isSaved {
                             Button("Stop Using Current Location") {
                                 userInfo.clearLocation()
                                 locationStatusMessage = "Current location disabled."
                                 locationErrorMessage = nil
                             }
                             .buttonStyle(.bordered)
-                            .controlSize(.large)
-                            .buttonBorderShape(.roundedRectangle)
+                            .controlSize(.regular)
                             .tint(.red)
                             .frame(maxWidth: .infinity)
-                            .contentShape(Rectangle())
-                            .disabled(isRequestingLocation)
                         }
-                        
+
                         Group {
                             if isRequestingLocation {
                                 HStack(spacing: 8) {
@@ -79,23 +85,22 @@ struct Profile: View {
                                     Text("Updating location…")
                                 }
                                 .foregroundStyle(.secondary)
-                                
+
                             } else if let locationStatusMessage {
                                 Text(locationStatusMessage)
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
-                                
+
                             } else if let locationErrorMessage {
                                 Text(locationErrorMessage)
                                     .font(.footnote)
                                     .foregroundStyle(.red)
-                                
-                            } else if userInfo.useCurrentLocationBool,
-                                      userInfo.currentLocation != nil {
+
+                            } else if isSaved {
                                 Text("Location saved and ready to use for nearby theaters.")
                                     .font(.footnote)
                                     .foregroundStyle(.secondary)
-                                
+
                             } else {
                                 Text("Share your location to find nearby theaters.")
                                     .font(.footnote)
@@ -127,12 +132,12 @@ struct Profile: View {
                     Button("Choose Profile Photo") {
                         isShowingProfilePhotoPicker = true
                     }
-                    .buttonStyle(.borderedProminent)
+                    .buttonStyle(.glassProminent)
                     .controlSize(.large)
                     .frame(maxWidth: .infinity, alignment: .center)
                     
-                    // Row 3 - remove photo button
-                    if userInfo.profilePhoto != nil {
+                    if let realPhoto = userInfo.profilePhoto,
+                       realPhoto != UIImage(named: "UserPicture") {
                         Button("Remove Profile Photo") {
                             userInfo.profilePhoto = nil
                         }
@@ -140,50 +145,61 @@ struct Profile: View {
                         .controlSize(.large)
                         .frame(maxWidth: .infinity, alignment: .center)
                     }
+
                 }
                 
                 // MARK: User Photos
+                // MARK: User Photos
                 Section("User Photos") {
 
-                    // Only render the scrollable preview when there are photos
+                    // Scrollable thumbnails
                     if !userInfo.userPhotos.isEmpty {
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
                                 ForEach(Array(userInfo.userPhotos.enumerated()), id: \.offset) { index, photo in
-                                    Button {
-                                        selectedPhotoIndex = index
-                                        isShowingDeletePhotoSheet = true
-                                    } label: {
-                                        Image(uiImage: photo)
-                                            .resizable()
-                                            .scaledToFill()
-                                            .frame(width: 140, height: 140)
-                                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                                            .clipped()
-                                    }
+                                    Image(uiImage: photo)
+                                        .resizable()
+                                        .scaledToFill()
+                                        .frame(width: 140, height: 140)
+                                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                                        .clipped()
+                                        .contentShape(Rectangle())   // ensures only this photo highlights on press
+                                        .contextMenu {
+                                            Button(role: .destructive) {
+                                                UserPhotosManager.shared.removeUserPhoto(at: index, from: &userInfo.userPhotos)
+                                            } label: {
+                                                Label("Delete Photo", systemImage: "trash")
+                                            }
+                                        }
                                 }
                             }
                             .padding(.vertical, 6)
                         }
                     }
 
-                    // Add Photos
-                    Button("Add Photos") {
-                        isShowingUserPhotosPicker = true
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .controlSize(.large)
-                    .disabled(userInfo.userPhotos.count >= 10)
-
-                    // Clear All
-                    if !userInfo.userPhotos.isEmpty {
-                        Button("Clear All Photos") {
-                            userInfo.clearUserPhotos()
+                    // Add + Clear layout
+                    HStack {
+                        Button("Add Photos") {
+                            isShowingUserPhotosPicker = true
                         }
-                        .foregroundColor(.red)
+                        .buttonStyle(.glass)
+                        .foregroundColor(.blue)
                         .controlSize(.large)
+                        .disabled(userInfo.userPhotos.count >= 10)
+
+                        Spacer()
+
+                        if !userInfo.userPhotos.isEmpty {
+                            Button("Clear User Photos") {
+                                userInfo.clearUserPhotos()
+                            }
+                            .buttonStyle(.glass)
+                            .foregroundColor(.red)
+                            .controlSize(.large)
+                        }
                     }
-                }
+                    .frame(maxWidth: .infinity)
+                }//end user photos section
 
 
 

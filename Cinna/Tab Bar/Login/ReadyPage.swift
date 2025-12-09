@@ -18,7 +18,7 @@ struct ReadyView: View {
             Image("UserPicture")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 96, height: 96)
+                .frame(width: 140)
                 .symbolRenderingMode(.hierarchical)
                 .foregroundColor(.accentColor)
 
@@ -26,8 +26,8 @@ struct ReadyView: View {
                 Text("All Set, \(name.isEmpty ? "my Cinna" : name)!")
                     .font(.largeTitle).bold()
 
-                Text("\(Text("Cinna").italic()) is now able to work tirelessly for you around the clock for no pay!")
-                    .font(.body)
+                Text("\(Text("Cinna").italic()) is now able to find movies tirelessly for free!")
+                    .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
@@ -37,13 +37,21 @@ struct ReadyView: View {
                 finish()
             } label: {
                 Text("Go to Home")
-                    .frame(maxWidth: .infinity)
+                    .font(.title3.weight(.semibold))
             }
-            .buttonStyle(.loginPrimary)
-
+            .buttonStyle(.glassProminent)
+            .controlSize(.large)
+            .padding(.top, 20)
             Spacer()
         }
         .padding(.top, 48)
         .background(Color(.systemBackground))
     }
+}
+
+#Preview {
+    ReadyView(
+        finish: {},
+        name: ""
+    )
 }

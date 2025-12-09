@@ -18,7 +18,7 @@ struct WelcomeView: View {
             Image("CinnaIcon")
                 .resizable()
                 .scaledToFit()
-                .frame(width: 240, height: 240)
+                .frame(width: 280)
                 .foregroundColor(.accentColor)
             
             Text("Welcome to \(Text("Cinna").italic())")
@@ -34,11 +34,11 @@ struct WelcomeView: View {
                 next()
             } label: {
                 Text("Let's Work!")
-                    .frame(maxWidth: .infinity)
+                    .font(.title3.weight(.semibold))
             }
-            .buttonStyle(.loginPrimary)
-            .glassEffect()
-            .padding(.top, 12)
+            .buttonStyle(.glassProminent)
+            .controlSize(.large)
+            .padding(.top, 24)
             
         }
         .padding()
