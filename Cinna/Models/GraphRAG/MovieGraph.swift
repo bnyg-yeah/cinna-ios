@@ -182,6 +182,19 @@ class MovieGraph {
                 let similarity = EmbeddingService.cosineSimilarity(movieEmbedding, vfxEmb)
                 nodes[id]?.visualEffectsScore = Double(similarity) * 10.0
             }
+            // Debug: print full scores for first movie (updated values)
+            if id == nodes.keys.first {
+                if let updated = nodes[id] {
+                    print("\n🎬 FULL SCORES FOR: \(updated.movie.title)")
+                    print("   Acting: \(String(format: "%.2f", updated.actingScore))")
+                    print("   Directing: \(String(format: "%.2f", updated.directingScore))")
+                    print("   Cinematography: \(String(format: "%.2f", updated.cinematographyScore))")
+                    print("   Writing: \(String(format: "%.2f", updated.writingScore))")
+                    print("   Sound: \(String(format: "%.2f", updated.soundScore))")
+                    print("   VFX: \(String(format: "%.2f", updated.visualEffectsScore))")
+                }
+            }
+
         }
         
         print("✅ Calculated filmmaking scores for \(nodes.count) movies")
