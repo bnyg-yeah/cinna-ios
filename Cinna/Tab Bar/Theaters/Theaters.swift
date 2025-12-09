@@ -109,7 +109,6 @@ struct Theaters: View {
                         }
                     }
                 }
-                .padding(.top, 24)
                 .padding(.horizontal, 20)
                 .padding(.bottom, 24)
             }
