@@ -24,6 +24,8 @@ struct MoviePreferences: View {
             }
             
             Section("Choose Your Favorites") {
+                Text("Genres")
+                    .font(.headline)
                 ForEach(GenrePreferences.allCases) { genrePreference in
                     Toggle(isOn: Binding(
                         get: { moviePreferences.selectedGenres.contains(genrePreference) },
@@ -40,6 +42,8 @@ struct MoviePreferences: View {
                     .tint(.accentColor)
                 }
                 
+                Text("Filmmaking")
+                    .font(.headline)
                 ForEach(FilmmakingPreferences.allCases) { filmmakingPreference in
                     Toggle(isOn: Binding(
                         get: {
@@ -60,6 +64,8 @@ struct MoviePreferences: View {
                     .tint(.accentColor)
                 }
                 
+                Text("Animation")
+                    .font(.headline)
                 ForEach(AnimationPreferences.allCases) { animationPreference in
                     Toggle(isOn: Binding(
                         get: {
@@ -74,6 +80,46 @@ struct MoviePreferences: View {
                         }
                     )) {
                         Label(animationPreference.title, systemImage: animationPreference.symbol)
+                    }
+                    .tint(.accentColor)
+                }
+                
+                Text("Studios")
+                    .font(.headline)
+                ForEach(StudioPreferences.allCases) { studioPreference in
+                    Toggle(isOn: Binding(
+                        get: {
+                            moviePreferences.selectedStudioPreferences.contains(studioPreference)
+                        },
+                        set: { isOn in
+                            if isOn {
+                                moviePreferences.selectedStudioPreferences.insert(studioPreference)
+                            } else {
+                                moviePreferences.selectedStudioPreferences.remove(studioPreference)
+                            }
+                        }
+                    )) {
+                        Label(studioPreference.title, systemImage: studioPreference.symbol)
+                    }
+                    .tint(.accentColor)
+                }
+                
+                Text("Themes")
+                    .font(.headline)
+                ForEach(ThemePreferences.allCases) { themePreference in
+                    Toggle(isOn: Binding(
+                        get: {
+                            moviePreferences.selectedThemePreferences.contains(themePreference)
+                        },
+                        set: { isOn in
+                            if isOn {
+                                moviePreferences.selectedThemePreferences.insert(themePreference)
+                            } else {
+                                moviePreferences.selectedThemePreferences.remove(themePreference)
+                            }
+                        }
+                    )) {
+                        Label(themePreference.title, systemImage: themePreference.symbol)
                     }
                     .tint(.accentColor)
                 }

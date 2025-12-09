@@ -125,7 +125,6 @@ final class AIMovieSceneBlenderService {
 
         let bodyData = try JSONEncoder().encode(body)
 
-        // i dont really know if i want gemini 3 pro as a fall back
         let endpoints = [
             "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image:generateContent"
         ]

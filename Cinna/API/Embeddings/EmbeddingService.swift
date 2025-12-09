@@ -78,7 +78,8 @@ struct EmbeddingService {
         let decoded = try JSONDecoder().decode(OpenAIEmbeddingResponse.self, from: data)
         
         #if DEBUG
-        print("✅ Generated \(decoded.data.count) embeddings in \(String(format: "%.2f", elapsed))s")
+        // Clarify this is API/network latency (request -> response decode)
+        print("✅ OpenAI embeddings API latency: \(decoded.data.count) vectors in \(String(format: "%.2f", elapsed))s (network + decode)")
         #endif
         
         // Return embeddings in original order
@@ -141,3 +142,4 @@ enum EmbeddingError: Error, LocalizedError {
         }
     }
 }
+

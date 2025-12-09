@@ -24,6 +24,9 @@ class MovieRecommendationEngine {
     func getPersonalizedRecommendations(
         selectedGenres: Set<GenrePreferences>,
         selectedFilmmakingPreferences: Set<FilmmakingPreferences> = [],
+        selectedAnimationPreferences: Set<AnimationPreferences> = [],
+        selectedStudioPreferences: Set<StudioPreferences> = [],
+        selectedThemePreferences: Set<ThemePreferences> = [],
         page: Int = 1
     ) async throws -> [TMDbMovie] {
         // If user hasn't selected any genres, return popular movies
@@ -58,10 +61,20 @@ class MovieRecommendationEngine {
             print("⭐ Applied \(userRatings.count) user ratings")
         }
         
-        // Step 6: Apply filmmaking preferences (embedding-based)
+        // Step 6: Apply movie preferences (embedding-based)
         if !selectedFilmmakingPreferences.isEmpty {
             graphRAG.applyFilmmakingPreferences(selectedFilmmakingPreferences)
         }
+        if !selectedAnimationPreferences.isEmpty {
+            graphRAG.applyAnimationPreferences(selectedAnimationPreferences)
+        }
+        if !selectedStudioPreferences.isEmpty {
+            graphRAG.applyStudioPreferences(selectedStudioPreferences)
+        }
+        if !selectedThemePreferences.isEmpty {
+            graphRAG.applyThemePreferences(selectedThemePreferences)
+        }
+
         
         // Step 7: Get recommendations using GraphRAG
         if useGraphRAG && graphRAG.isReady() {
@@ -117,7 +130,7 @@ class MovieRecommendationEngine {
     // MARK: - Generate Movie Embeddings
     
     // MARK: - Generate Movie Embeddings (BATCH MODE - FAST!)
-
+    
     /// Generate embeddings for movies using batch processing
     private func generateMovieEmbeddings(
         for movies: [TMDbMovie]
@@ -175,18 +188,20 @@ class MovieRecommendationEngine {
         }
         
         do {
-            let startTime = Date()
+            // API latency & decode is logged inside EmbeddingService.
             let generatedEmbeddings = try await EmbeddingService.shared.batchGenerateEmbeddings(for: textsOnly)
-            let elapsed = Date().timeIntervalSince(startTime)
             
+            // Measure only the attach/mapping time (exclude API latency)
+            let attachStart = Date()
             // Map embeddings back to movie IDs
             for (index, (id, _)) in movieData.enumerated() {
                 if index < generatedEmbeddings.count {
                     embeddings[id] = generatedEmbeddings[index]
                 }
             }
+            let attachElapsed = Date().timeIntervalSince(attachStart)
             
-            print("✅ Generated \(embeddings.count)/\(movies.count) embeddings in \(String(format: "%.2f", elapsed))s")
+            print("✅ Attached \(embeddings.count)/\(movies.count) embeddings to movies in \(String(format: "%.2f", attachElapsed))s (excluding API latency)")
         } catch {
             print("❌ Batch embedding failed: \(error)")
         }
@@ -272,3 +287,4 @@ class MovieRecommendationEngine {
         graphRAG.reset()
     }
 }
+

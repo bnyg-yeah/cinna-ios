@@ -39,6 +39,4 @@ enum AnimationPreferences: String, CaseIterable, Identifiable, Hashable {
         case .stylizedArt: return "paintpalette"
         }
     }
-    
-    //Later on, we have tmdb IDs, like the genres
 }

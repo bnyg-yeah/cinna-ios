@@ -47,7 +47,11 @@ class GraphRAGEngine {
         // Calculate filmmaking scores
         if let prefEmb = preferenceEmbeddings {
             graph.calculateFilmmakingScores(preferenceEmbeddings: prefEmb)
+            graph.calculateAnimationScores(preferenceEmbeddings: prefEmb)
+            graph.calculateStudioScores(preferenceEmbeddings: prefEmb)
+            graph.calculateThemeScores(preferenceEmbeddings: prefEmb)
         }
+
     }
     
     // MARK: - Apply User Ratings
@@ -56,12 +60,24 @@ class GraphRAGEngine {
         graph.applyUserRatings(ratings)
     }
     
-    // MARK: - Apply Filmmaking Preferences
+    // MARK: - Apply Preferences
     
     func applyFilmmakingPreferences(_ preferences: Set<FilmmakingPreferences>) {
         graph.applyFilmmakingPreferences(preferences)
     }
     
+    func applyAnimationPreferences(_ preferences: Set<AnimationPreferences>) {
+        graph.applyAnimationPreferences(preferences)
+    }
+    
+    func applyStudioPreferences(_ preferences: Set<StudioPreferences>) {
+        graph.applyStudioPreferences(preferences)
+    }
+    
+    func applyThemePreferences(_ preferences: Set<ThemePreferences>) {
+        graph.applyThemePreferences(preferences)
+    }
+
     // MARK: - Get Recommendations
     
     func getRecommendations(for genreIDs: [Int], limit: Int = 20) -> [TMDbMovie] {
