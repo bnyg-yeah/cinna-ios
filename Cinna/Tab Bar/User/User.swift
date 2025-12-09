@@ -96,7 +96,6 @@ struct User: View {
             }  //end body
 //            .safeAreaPadding(.top)
             .padding(.horizontal, 20)
-            .padding(.bottom, 32)
             .scrollIndicators(.hidden)
             .background(BackgroundView())
             .overlay(alignment: .topTrailing) {

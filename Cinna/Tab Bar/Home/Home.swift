@@ -72,7 +72,10 @@ struct Home: View {
                     }
                 }
             }
-            .background(BackgroundView())
+            .background(
+                BackgroundView()
+                    .ignoresSafeArea(.keyboard, edges: .bottom)
+            )
 
             .navigationDestination(for: TMDbMovie.self) { movie in
                 MovieDetailView(movie: movie)
