@@ -265,8 +265,7 @@ struct MovieDetailView: View {
                     HStack(alignment: .center, spacing: 10) {
                         ForEach(1...4, id: \.self) { value in
                             Button {
-                                UserRatings.shared.setRating(value, for: movie.id)
-                                currentUserRating = value
+                                userRatings.setRating(value, for: movie)
                             } label: {
                                 Text("\(value)")
                                     .font(.headline)
@@ -278,8 +277,7 @@ struct MovieDetailView: View {
                         }
                         
                         Button {
-                            UserRatings.shared.clearRating(for: movie.id)
-                            currentUserRating = nil
+                            userRatings.setRating(nil, for: movie)
                         } label: {
                             Text("Clear")
                                 .font(.subheadline)
